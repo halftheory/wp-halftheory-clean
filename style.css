@@ -1,0 +1,55 @@
+/*
+Theme Name: Half/theory Clean
+Theme URI: https://github.com/halftheory/wp-halftheory-clean
+Author: Half/theory
+Author URI: https://github.com/halftheory
+Description: clean css, mobile menu, meta tags, wordpress cleanup
+Version: 1.0
+License: GNU General Public License v2 or later
+License URI: http://www.gnu.org/licenses/gpl-2.0.html
+Text Domain: halftheory-clean
+*/
+@import url(assets/css/normalize.css);
+html { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; -moz-text-size-adjust: 100%; -o-text-size-adjust: 100%; text-size-adjust: 100%; font-family: sans-serif; box-sizing: border-box; }
+
+*, *:before, *:after { box-sizing: inherit; }
+
+body { font-size: 16px; font-size: 1rem; margin: 0; font-weight: normal; font-style: normal; text-decoration: none; }
+
+body * { margin: 0; padding: 0; border: 0; background-color: transparent; font-size: inherit; font-weight: inherit; font-style: inherit; text-decoration: inherit; line-height: inherit; }
+
+b, strong, .bold { font-weight: 700; }
+
+i, em, .italic { font-style: italic; }
+
+u, .underline { text-decoration: underline; }
+
+del, .strikethrough { text-decoration: line-through; }
+
+small, .small { font-size: 12.8px; font-size: 0.8rem; }
+
+.none { display: none; }
+
+.hidden { visibility: hidden; }
+
+.transparent { opacity: 0; filter: alpha(opacity=0); }
+
+.clear { clear: both; }
+
+.nobr { white-space: nowrap; }
+
+.float-left { float: left; }
+
+.float-right { float: right; }
+
+.indent-left { margin-left: 32px; margin-left: 2rem; }
+
+.indent-right { margin-right: 32px; margin-right: 2rem; }
+
+.center { text-align: center; }
+
+a:focus { outline: 0; }
+
+.clearfix:before, .clearfix:after { display: table; content: " "; }
+
+.clearfix:after { clear: both; }
