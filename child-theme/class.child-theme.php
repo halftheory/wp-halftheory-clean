@@ -2,10 +2,6 @@
 // Exit if accessed directly.
 defined('ABSPATH') || exit;
 
-/* functions */
-
-/* actions */
-
 if (!class_exists('Child_Theme')) :
 
 @include_once(get_template_directory().'/functions-common.php');
@@ -27,8 +23,8 @@ class Child_Theme extends Halftheory_Clean {
 
 	protected function setup_globals() {
 		parent::setup_globals();
-		$this->plugin_name = get_called_class();
-		$this->plugin_title = ucwords(str_replace('_', ' ', $this->plugin_name));
+		#$this->plugin_name = get_called_class();
+		#$this->plugin_title = ucwords(str_replace('_', ' ', $this->plugin_name));
 		$this->prefix = sanitize_key($this->plugin_name);
 		$this->prefix = preg_replace("/[^a-z0-9]/", "", $this->prefix);
 	}
@@ -45,6 +41,9 @@ class Child_Theme extends Halftheory_Clean {
 			return;
 		}
 	}
+
+	/* actions */
+	/* functions */
 	
 }
 endif;
