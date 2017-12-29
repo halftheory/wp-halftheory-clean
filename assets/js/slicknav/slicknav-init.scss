@@ -1,0 +1,28 @@
+@charset "UTF-8";
+@import '../../css/_style-master.scss';
+
+// mobile
+
+.slicknav_menu {
+	display:none;
+}
+.slicknav_brand {
+	color: #fff;
+	* {
+		color: inherit;
+	}
+}
+@include tablet {
+	header #menu, header #logo {
+		display:none;
+	}	
+	.slicknav_menu {
+		display:block;
+	}
+	#primary, #secondary {
+		float: none;
+	}
+	#secondary {
+		@include rem(margin-top, 2);
+	}
+}

@@ -1,0 +1,10 @@
+.slicknav_menu { display: none; }
+
+.slicknav_brand { color: #fff; }
+
+.slicknav_brand * { color: inherit; }
+
+@media screen and (max-width: 768px) { header #menu, header #logo { display: none; }
+  .slicknav_menu { display: block; }
+  #primary, #secondary { float: none; }
+  #secondary { margin-top: 32px; margin-top: 2rem; } }

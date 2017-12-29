@@ -1,0 +1,99 @@
+@charset "UTF-8";
+@import '_style-master.scss';
+
+// elements
+
+html {
+	@include vendor-prefix(text-size-adjust, 100%);
+	font-family: sans-serif;
+	box-sizing: border-box;
+}
+*,
+*:before,
+*:after {
+  box-sizing: inherit;
+}
+body {
+	@include rem(font-size, 1);
+	margin: 0;
+	font-weight: normal;
+	font-style: normal;
+	text-decoration: none;
+	* {
+		margin: 0;
+		padding: 0;
+		border: 0;
+		background-color: transparent;
+		font-size: inherit;
+		font-weight: inherit;
+		font-style: inherit;
+		text-decoration: inherit;
+		line-height: inherit;
+	}
+}
+
+// classes
+
+@import '_style-classes.scss';
+
+b,
+strong,
+.bold {
+	@extend %bold;
+}
+i,
+em,
+.italic {
+	@extend %italic;
+}
+u,
+.underline {
+	@extend %underline;
+}
+del,
+.strikethrough {
+	@extend %strikethrough;
+}
+small,
+.small {
+	@extend %small;
+}
+a:focus {
+	outline: 0;
+}
+
+// common classes
+
+.none {
+	@extend %none;
+}
+.hidden {
+	@extend %hidden;
+}
+.transparent {
+	@extend %transparent;
+}
+.clear {
+	@extend %clear;
+}
+.clearfix {
+	@include clearfix;
+}
+.nobr {
+	@extend %nobr;
+}
+.float-left {
+	@extend %float-left;
+}
+.float-right {
+	@extend %float-right;
+}
+.indent-left {
+	@extend %indent-left;
+}
+.indent-right {
+	@extend %indent-right;
+}
+.center {
+	@extend %center;
+}

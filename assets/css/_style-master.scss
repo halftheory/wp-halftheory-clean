@@ -1,0 +1,169 @@
+@charset "UTF-8";
+// http://sass-lang.com/documentation/Sass/Script/Functions.html#unitless-instance_method
+// http://sass-lang.com/guide
+
+// variables
+
+$default-font-size: 16px;
+$default-line-height: 1.5rem;
+
+// mobile
+
+$desktop-width: 1024px;
+$tablet-width: 768px;
+$phone-width: 480px;
+
+@mixin tablet {
+	//@media screen and (min-width: #{$phone-width + 1px}) and (max-width: #{$tablet-width}) {
+	@media screen and (max-width: #{$tablet-width}) {
+		@content;
+	}
+}
+@mixin phone {
+	@media screen and (max-width: #{$phone-width}) {
+		@content;
+	}
+}
+@mixin desktop {
+	@media screen and (min-width: #{$tablet-width}) {
+		@content;
+	}
+}
+
+// functions
+
+@function strip-unit($num) {
+	//@if (unitless($num) == false) {
+	@if type-of($num) == 'number' and not unitless($num) {
+		$num: $num / ($num * 0 + 1);
+	}
+	@return $num;
+}
+
+@mixin rem($property, $values...) {
+	$max: length($values);
+	$pxValues: '';
+	$remValues: '';
+
+	@for $i from 1 through $max {
+		$value: nth($values, $i);
+		@if type-of($value) == 'number' {
+		    $value: strip-unit($value);
+		    $pxValues: #{$pxValues + $value * strip-unit($default-font-size)}px;
+		    $remValues: #{$remValues + $value}rem;
+		}
+		@else {
+			$pxValues: #{$pxValues + $value};
+		    $remValues: #{$remValues + $value};
+		}
+
+	    @if $i < $max {
+			$pxValues: #{$pxValues + " "};
+			$remValues: #{$remValues + " "};
+	    }
+	} 
+
+	#{$property}: $pxValues; 
+	#{$property}: $remValues; 
+}
+
+@mixin vw($property, $values...) {
+	$max: length($values);
+	$pxValues: '';
+	$remValues: '';
+
+	@for $i from 1 through $max {
+		$value: nth($values, $i);
+		@if type-of($value) == 'number' {
+		    $value: strip-unit($value);
+		    $pxValues: #{$pxValues + $value * strip-unit($default-font-size) * 0.6}px;
+		    $remValues: #{$remValues + $value}vw;
+		}
+		@else {
+			$pxValues: #{$pxValues + $value};
+		    $remValues: #{$remValues + $value};
+		}
+
+	    @if $i < $max {
+			$pxValues: #{$pxValues + " "};
+			$remValues: #{$remValues + " "};
+	    }
+	} 
+
+	#{$property}: $pxValues; 
+	#{$property}: $remValues; 
+}
+
+@mixin link($selector: a) {
+	@if $selector == & {
+		&, &:link, &:visited {
+			@content;
+		}
+	}
+	@else {
+		#{$selector}, #{$selector}:link, #{$selector}:visited {
+			@content;
+		}
+	}
+}
+@mixin hover($selector: a) {
+	@if $selector == & {
+		&:hover, &:active, &:focus {
+			@content;
+		}
+	}
+	@else {
+		#{$selector}:hover, #{$selector}:active, #{$selector}:focus {
+			@content;
+		}
+	}
+}
+
+@mixin clearfix {
+	&:before,
+	&:after {
+	  display: table;
+	  content: " ";
+	}
+	&:after {
+	  clear: both;
+	}
+	@content;
+}
+
+// browser vendor prefixes
+
+@mixin vendor-prefix($property, $value) {
+  -webkit-#{$property}: #{$value};
+  -ms-#{$property}: #{$value};
+  -moz-#{$property}: #{$value};
+  -o-#{$property}: #{$value};
+  #{$property}: #{$value};
+}
+
+@mixin vendor-prefix-rem($property, $values...) {
+	$max: length($values);
+	$pxValues: '';
+	$remValues: '';
+
+	@for $i from 1 through $max {
+		$value: nth($values, $i);
+		@if type-of($value) == 'number' {
+		    $value: strip-unit($value);
+		    $pxValues: #{$pxValues + $value * strip-unit($default-font-size)}px;
+		    $remValues: #{$remValues + $value}rem;
+		}
+		@else {
+			$pxValues: #{$pxValues + $value};
+		    $remValues: #{$remValues + $value};
+		}
+
+	    @if $i < $max {
+			$pxValues: #{$pxValues + " "};
+			$remValues: #{$remValues + " "};
+	    }
+	} 
+
+	@include vendor-prefix(#{$property}, $pxValues);
+	@include vendor-prefix(#{$property}, $remValues);
+}
