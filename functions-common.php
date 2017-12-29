@@ -56,7 +56,7 @@ if (!function_exists('is_front_end')) {
 if (!function_exists('is_login_page')) {
 	function is_login_page() {
 		$wp_login = 'wp-login.php';
-		if (defined(WP_LOGIN_SCRIPT)) {
+		if (defined('WP_LOGIN_SCRIPT')) {
 			$wp_login = WP_LOGIN_SCRIPT;
 		}
 		if ($GLOBALS['pagenow'] === $wp_login) {
