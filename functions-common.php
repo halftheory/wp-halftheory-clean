@@ -4,6 +4,21 @@ defined('ABSPATH') || exit;
 
 /* functions */
 
+if (!function_exists('make_array')) {
+	function make_array($str = '', $sep = ',') {
+		if (is_array($str)) {
+			return $str;
+		}
+		if (empty($str)) {
+			return array();
+		}
+		$arr = explode($sep, $str);
+		$arr = array_map('trim', $arr);
+		$arr = array_filter($arr);
+		return $arr;
+	}
+}
+
 if (!function_exists('is_user_logged_in_cookie')) {
 	function is_user_logged_in_cookie() {
 		if (function_exists('is_user_logged_in')) {
@@ -432,24 +447,37 @@ if (!function_exists('get_excerpt')) {
 			'allowable_tags' => array(),
 			'plaintext' => false,
 			'single_line' => true,
-			'trim_title' => '',
+			'trim_title' => array(),
 			'trim_urls' => true,
 			'add_dots' => true,
 		);
 		$default_args = apply_filters('get_excerpt_default_args', $default_args);
-		if (!empty($args)) {
-			$default_args = array_merge($default_args, (array)$args);
+		if (function_exists('make_array')) {
+			$args = make_array($args);
 		}
-		$args = $default_args;
+		$args = array_merge($default_args, (array)$args);
 		if (function_exists('fix_potential_html_string')) {
 			$text = fix_potential_html_string($text);
 		}
 		// add a space for lines if needed
-		if ($args['single_line'] === true && strpos($text, "<") !== false) {
+		if ($args['single_line'] && strpos($text, "<") !== false) {
 			$text = preg_replace("/(<p>|<p [^>]*>|<\/p>|<br>|<br\/>|<br \/>)/i", "$1 ", $text);
 		}
 		// remove what we don't need
+		if (function_exists('make_array')) {
+			$args['allowable_tags'] = make_array($args['allowable_tags']);
+		}
+		elseif (!is_array($args['allowable_tags'])) {
+			$args['allowable_tags'] = (array)$args['allowable_tags'];
+		}
 		if (!empty($args['allowable_tags']) && $args['plaintext'] === false) {
+			// script/style tags - special case - remove all contents
+			$strip_all = array('script', 'style');
+			foreach ($strip_all as $value) {
+				if (!array_key_exists($value, $args['allowable_tags'])) {
+					$text = preg_replace("/<".$value."[^>]*>.*?<\/".$value.">/is", "", $text);
+				}
+			}
 			$args['allowable_tags'] = '<'.implode('><', (array)$args['allowable_tags']).'>';
 			$text = strip_tags($text, $args['allowable_tags']);
 		}
@@ -463,7 +491,7 @@ if (!function_exists('get_excerpt')) {
 			$text = strip_shortcodes($text);
 		}
 		// remove excess space
-		if ($args['single_line'] === true) {
+		if ($args['single_line']) {
 			$text = preg_replace("/[\n\r]+/s", " ", $text);
 		}
 		$text = preg_replace("/[\t]+/s", " ", $text); // no tabs
@@ -472,10 +500,13 @@ if (!function_exists('get_excerpt')) {
 		}
 		// trim the top
 		$regex_arr = array("(<br>|<br\/>|<br \/>)");
+		if (function_exists('make_array')) {
+			$args['trim_title'] = make_array($args['trim_title']);
+		}
+		elseif (!is_array($args['trim_title'])) {
+			$args['trim_title'] = (array)$args['trim_title'];
+		}
 		if (!empty($args['trim_title'])) {
-			if (!is_array($args['trim_title'])) {
-				$args['trim_title'] = (array)$args['trim_title'];
-			}
 			if (function_exists('fix_potential_html_string')) {
 				$args['trim_title'] = array_map('fix_potential_html_string', $args['trim_title']);
 			}
@@ -489,7 +520,7 @@ if (!function_exists('get_excerpt')) {
 				$regex_arr[] = $value;
 			}
 		}
-		if ($args['trim_urls'] === true) {
+		if ($args['trim_urls']) {
 		    $regex = "((https?|ftp)://)"; // SCHEME
 		    $regex .= "([a-z0-9+!*(),;?&=\$_.-]+(:[a-z0-9+!*(),;?&=\$_.-]+)?@)?"; // User and Pass
 		    $regex .= "([a-z0-9-.]*)\.([a-z]{2,4})"; // Host or IP
@@ -541,33 +572,44 @@ if (!function_exists('get_excerpt')) {
 			}
 		}
 		// correct length
-		// TODO: calculate length without tags
-		if (strlen(strip_tags($text)) > $length) {
+		// TODO: find a fast way of checking multibyte strings here
+		if (strlen(strip_tags($text)) <= $length) {
+			if ($args['plaintext']) {
+				return $text;
+			}
+		}
+		// add dots
+		else {
 			$length_new = $length;
 			if (!preg_match("/[^a-z0-9]/i", mb_substr($text, $length, 1))) {
 				$length_new = mb_strrpos( mb_substr($text, 0, $length), " ");
 			}
 			$text = mb_substr($text,0,$length_new,'UTF-8');
+			if ($args['add_dots']) {
+				if ($args['plaintext']) {
+					$text .= "...";
+				}
+				else {
+					$text .= '&hellip;';
+				}
+				$text = preg_replace("/[^a-z0-9>]+(\.\.\.|&#8230;|&hellip;)[\s]*$/i", "$1", $text);
+			}
+		}
+		// add line breaks?
+		if ($args['single_line'] === false && $args['plaintext'] === false && strpos($text, '<br />') === false && strpos($text, '</') === false) {
+			$text = nl2br($text);
+			// TODO: cleanup br tags directly next to p tags
 		}
 		// close open tags
 		if (!empty($args['allowable_tags']) && $args['plaintext'] === false) {
-			// puts plaintext in a p
-			$dom = @DOMDocument::loadHTML( mb_convert_encoding($text, 'HTML-ENTITIES', 'UTF-8') );
-			$text = trim( strip_tags( html_entity_decode( $dom->saveHTML() ), $args['allowable_tags'] ) );
-		}
-		if ($args['single_line'] === false && $args['plaintext'] === false && strpos($text, '<br />') === false && strpos($text, '</p>') === false) {
-			$text = nl2br($text);
-			// TODO: cleanup brs directly next to ps
-		}
-		// add dots
-		if ($args['add_dots'] === true && isset($length_new)) {
-			if ($args['plaintext'] === true) {
-				$text .= "...";
+			if (function_exists('force_balance_tags')) {
+				$text = force_balance_tags($text);
 			}
 			else {
-				$text .= '&hellip;';
+				// puts plaintext in a p
+				$dom = @DOMDocument::loadHTML( mb_convert_encoding($text, 'HTML-ENTITIES', 'UTF-8') );
+				$text = trim( strip_tags( html_entity_decode( $dom->saveHTML() ), $args['allowable_tags'] ) );
 			}
-			$text = preg_replace("/[^a-z0-9>]+(\.\.\.|&#8230;|&hellip;)[\s]*$/i", "$1", $text);
 		}
 		return $text;
 	}
