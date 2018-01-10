@@ -175,11 +175,11 @@ class Halftheory_Clean {
 		// slicknav
 		if (has_nav_menu('primary-menu')) {
 			// header
-			wp_enqueue_style('slicknav', get_template_directory_uri().'/assets/js/slicknav/slicknav.min.css', array(), '', 'screen');
-			wp_enqueue_style('slicknav-init', get_template_directory_uri().'/assets/js/slicknav/slicknav-init.css', array('slicknav'), '', 'screen');
+			wp_enqueue_style('slicknav', get_template_directory_uri().'/assets/js/slicknav/slicknav.min.css', array(), null, 'screen');
+			wp_enqueue_style('slicknav-init', get_template_directory_uri().'/assets/js/slicknav/slicknav-init.css', array('slicknav'), null, 'screen');
 			// footer
-			wp_enqueue_script('slicknav-js', get_template_directory_uri().'/assets/js/slicknav/jquery.slicknav.min.js', array('jquery'), '', true);
-			wp_enqueue_script('slicknav-init', get_template_directory_uri().'/assets/js/slicknav/slicknav-init.js', array('jquery', 'slicknav-js'), '', true);
+			wp_enqueue_script('slicknav-js', get_template_directory_uri().'/assets/js/slicknav/jquery.slicknav.min.js', array('jquery'), null, true);
+			wp_enqueue_script('slicknav-init', get_template_directory_uri().'/assets/js/slicknav/slicknav-init.js', array('jquery', 'slicknav-js'), null, true);
 			$data = array(
 			    'brand' => '<a href="'.esc_url(network_home_url('/')).'">'.get_bloginfo('name').'</a>'
 			);
@@ -479,6 +479,9 @@ class Halftheory_Clean {
 				$arr = get_the_category($post_ID);
 				if (!empty($arr)) {
 					foreach ($arr as $key => $value) {
+						if ($value->name == 'Uncategorized') {
+							continue;
+						}
 						$ancestors[] = $value->name;
 					}
 				}
