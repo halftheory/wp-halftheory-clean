@@ -581,10 +581,18 @@ if (!function_exists('get_excerpt')) {
 		// add dots
 		else {
 			$length_new = $length;
-			if (!preg_match("/[^a-z0-9]/i", mb_substr($text, $length, 1))) {
+			if ($args['plaintext'] && !preg_match("/[^a-z0-9]/i", mb_substr($text, $length, 1))) {
+				$length_new = mb_strrpos( mb_substr($text, 0, $length), " ");
+			}
+			elseif (!preg_match("/[^a-z0-9>]/i", mb_substr($text, $length, 1))) {
 				$length_new = mb_strrpos( mb_substr($text, 0, $length), " ");
 			}
 			$text = mb_substr($text,0,$length_new,'UTF-8');
+			// check if we cut in the middle of a tag
+			if (!empty($args['allowable_tags']) && $args['plaintext'] === false) {
+				$tags = trim( str_replace('><', '|', $args['allowable_tags']), '><');
+				$text = preg_replace("/^(.+)<($tags) [^>]+$/is", "$1", $text);
+			}
 			if ($args['add_dots']) {
 				if ($args['plaintext']) {
 					$text .= "...";
