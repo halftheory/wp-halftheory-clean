@@ -409,6 +409,13 @@ if (!function_exists('strip_tags_attr')) {
 				$domElement->parentNode->removeChild($domElement);
 			}
 			$str = trim( strip_tags( html_entity_decode( $dom->saveHTML() ), $allowable_tags ) );
+			// wp adds single space before closer, so we should match it
+			preg_match_all("/(<(".implode("|", $void_tags).") [^>]+)>/is", $str, $matches);
+			if ($matches[0][0]) {
+				foreach ($matches[0] as $key => $value) {
+					$str = str_replace($value, rtrim($matches[1][$key], '/ ').' />', $str);
+				}
+			}
 		}
 		return $str;
 	}
