@@ -44,6 +44,11 @@ if (!function_exists('get_current_uri')) {
 	 	$res  = is_ssl() ? 'https://' : 'http://';
 	 	$res .= $_SERVER['HTTP_HOST'];
 	 	$res .= $_SERVER['REQUEST_URI'];
+		if (wp_doing_ajax()) {
+			if (!empty($_SERVER["HTTP_REFERER"])) {
+				$res = $_SERVER["HTTP_REFERER"];
+			}
+		}
 		return $res;
 	}
 }
@@ -54,13 +59,7 @@ if (!function_exists('is_front_end')) {
 			return false;
 		}
 		if (wp_doing_ajax()) {
-			if (!empty($_SERVER["HTTP_REFERER"])) {
-				$url_test = $_SERVER["HTTP_REFERER"];
-			}
-			else {
-				$url_test = get_current_uri();
-			}
-			if (strpos($url_test, admin_url()) !== false) {
+			if (strpos(get_current_uri(), admin_url()) !== false) {
 				return false;
 			}
 		}
@@ -181,6 +180,9 @@ if (!function_exists('url_exists')) {
 
 if (!function_exists('get_visitor_ip')) {
 	function get_visitor_ip() {
+		if (is_localhost()) {
+			return false;
+		}
 		if (getenv("HTTP_CLIENT_IP") && strcasecmp(getenv("HTTP_CLIENT_IP"), "unknown")) {
 			$ip = getenv("HTTP_CLIENT_IP");
 		}
