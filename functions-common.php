@@ -19,6 +19,28 @@ if (!function_exists('make_array')) {
 	}
 }
 
+if (!function_exists('array_value_unset')) {
+	function array_value_unset($arr = array(), $value = '', $removals = -1) {
+		$arr = make_array($arr);
+		if (empty($arr)) {
+			return $arr;
+		}
+		if ($removals >= 1) {
+			$i = 0;
+			while ($i < $removals && in_array($value, $arr)) {
+				$key = array_search($value, $arr);
+				unset($arr[$key]);
+				$i++;
+			}
+		}
+		// remove all
+		else {
+			$arr = array_diff($arr, array($value));
+		}
+		return $arr;
+	}
+}
+
 if (!function_exists('is_user_logged_in_cookie')) {
 	function is_user_logged_in_cookie() {
 		if (function_exists('is_user_logged_in')) {
@@ -279,7 +301,10 @@ if (!function_exists('strip_tags_html_comments')) {
 
 if (!function_exists('strip_all_shortcodes')) {
 	function strip_all_shortcodes($str = '') {
-		return preg_replace("/\[[^\]]+\]/is", "", $str);
+		if (strpos($str, '<script') === false) { // causes problems with inline javascript
+			$str = preg_replace("/\[[^\]]+\]/is", "", $str);
+		}
+		return $str;
 	}
 }
 
