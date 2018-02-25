@@ -2,7 +2,6 @@
 // Exit if accessed directly.
 defined('ABSPATH') || exit;
 
-/* actions */
 if (!class_exists('Halftheory_Clean')) :
 class Halftheory_Clean {
 
