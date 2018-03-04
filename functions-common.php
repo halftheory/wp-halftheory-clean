@@ -301,8 +301,17 @@ if (!function_exists('strip_tags_html_comments')) {
 
 if (!function_exists('strip_all_shortcodes')) {
 	function strip_all_shortcodes($str = '') {
-		if (strpos($str, '<script') === false) { // causes problems with inline javascript
-			$str = preg_replace("/\[[^\]]+\]/is", "", $str);
+		$go = true;
+		// inline scripts
+		if (strpos($str, '<script') !== false) {
+			$go = false;
+		}
+		// [] inside html tag
+		if ($go && preg_match("/<[a-z]+ [^>\[\]]+\[[^>]+>/is", $str)) {
+			$go = false;
+		}
+		if ($go) {
+			$str = preg_replace("/\[[^\]]{5,}\]/is", "", $str); // more than 4 letters
 		}
 		return $str;
 	}
@@ -698,11 +707,6 @@ if (!function_exists('get_page_thumbnail_id')) {
 		if (!empty($image_id)) {
 			return $image_id;
 		}
-		/*
-		if ($id == 'buddypress') {
-			$image_id = bp_core_fetch_avatar(array('item_id' => bp_displayed_user_id(), 'type' => 'full', 'html' => false));
-		}
-		*/
 		if (empty($id) || !is_int($id)) {
 			$id = get_the_ID();
 		}
