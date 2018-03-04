@@ -71,6 +71,8 @@ class Halftheory_Clean {
 	public function after_setup_theme() { // first available action after plugins_loaded
 		if (is_front_end()) {
 			define('CURRENT_URL', get_current_uri());
+			$url = trailingslashit(remove_query_arg(array_keys($_GET), CURRENT_URL));
+			define('CURRENT_URL_NOQUERY', $url);
 		}
 		add_theme_support('automatic-feed-links');
 		add_theme_support('post-thumbnails', array('post', 'page'));
@@ -465,12 +467,10 @@ class Halftheory_Clean {
 			if (empty($post_ID)) {
 				// some plugins like buddypress hide the real post_id in queried_object_id
 				global $wp_query;
-				if (isset($wp_query->queried_object_id)) {
-					if (!empty($wp_query->queried_object_id)) {
-						$post_ID = $wp_query->queried_object_id;
-						if (isset($wp_query->queried_object)) {
-							$post = $wp_query->queried_object;
-						}
+				if (isset($wp_query->queried_object_id) && !empty($wp_query->queried_object_id)) {
+					$post_ID = $wp_query->queried_object_id;
+					if (isset($wp_query->queried_object)) {
+						$post = $wp_query->queried_object;
 					}
 				}
 			}
