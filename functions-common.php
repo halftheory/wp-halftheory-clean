@@ -710,22 +710,19 @@ if (!function_exists('get_page_thumbnail_id')) {
 		if (empty($id) || !is_int($id)) {
 			$id = get_the_ID();
 		}
+		if (empty($id)) {
+			return false;
+		}
 		// 1. use featured image
 		$image_id = get_post_thumbnail_id($id);
 		if (!empty($image_id)) {
 			return (int)$image_id;
 		}
 		// 2. get media children
-		if (empty($image_id)) {
-			$media = get_attached_media('image', $id);
-			if (!empty($media)) {
-				$image_id = key($media);
-				// update post thumbnail
-				if (is_int($image_id)) {
-					update_post_meta($id, '_thumbnail_id', $image_id);
-				}
-				return $image_id;
-			}
+		$media = get_attached_media('image', $id);
+		if (!empty($media)) {
+			$image_id = key($media);
+			return $image_id;
 		}
 		// 3. use first single image or first gallery image (whatever comes first)
 		$content = get_post_field('post_content', $id, 'raw');
@@ -770,11 +767,7 @@ if (!function_exists('get_page_thumbnail_id')) {
 				}
 			}
 			if (!empty($image_id)) {
-				// update post thumbnail
-				if (is_int($image_id)) {
-					update_post_meta($id, '_thumbnail_id', $image_id);
-				}
-				elseif (is_string($image_id)) {
+				if (is_string($image_id)) {
 					$image_id = set_url_scheme($image_id);
 				}
 				return $image_id;
