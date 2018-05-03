@@ -56,6 +56,8 @@ class Halftheory_Clean {
 
 		add_action('pre_ping', array($this, 'no_self_ping'));
 		add_action('pings_open', array($this, 'pings_open'));
+
+		remove_filter('the_content', 'convert_smilies', 20);
 	}
 
 	/* install */
@@ -236,7 +238,7 @@ class Halftheory_Clean {
 		// description
 		$excerpt = '';
 		if (is_singular()) {
-			$excerpt = get_the_excerpt_filtered($post);
+			#$excerpt = get_the_excerpt_filtered($post); // as of May 2018 throws error in PHP7
 			if (empty($excerpt) && !empty($post->post_content)) {
 				$excerpt = wp_trim_words(get_the_content_filtered($post->post_content));
 			}
