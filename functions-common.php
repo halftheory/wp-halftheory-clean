@@ -226,11 +226,14 @@ if (!function_exists('get_visitor_ip')) {
 
 if (!function_exists('get_the_excerpt_filtered')) {
 	function get_the_excerpt_filtered($str_or_post = '') {
-		if (is_string($str_or_post)) {
-			$str = $str_or_post;
+		if (empty($str_or_post)) {
+			return $str_or_post;
+		}
+		if (is_numeric($str_or_post) || is_object($str_or_post)) {
+			$str = get_the_excerpt($str_or_post);
 		}
 		else {
-			$str = get_the_excerpt($str_or_post);
+			$str = $str_or_post;
 		}
 		$str = apply_filters('the_excerpt', $str);
 		return $str;

@@ -8,7 +8,7 @@ Description: Common PHP functions, clean CSS, mobile menu, meta tags removed, Wo
 Version: 1.0
 License: GNU General Public License v2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
-Text Domain: halftheory-clean
+Text Domain: wp-halftheory-clean
 */
 @import url(assets/css/normalize.css);
 html { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; -moz-text-size-adjust: 100%; -o-text-size-adjust: 100%; text-size-adjust: 100%; font-family: sans-serif; box-sizing: border-box; }
