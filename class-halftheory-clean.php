@@ -42,20 +42,17 @@ class Halftheory_Clean {
 		}, 9);
 		
 		add_action('wp_head', array($this, 'wp_head'), 20);
-		add_filter('site_icon_meta_tags', array($this, 'site_icon_meta_tags'));
 		add_action('wp_head', array($this, 'wp_site_icon'), 100);
 		remove_filter('wp_title', 'wptexturize');
 		add_filter('wp_title', array($this, 'wp_title'));
-		//add_filter('feed_links_show_posts_feed', '__return_false');
 		add_filter('feed_links_show_comments_feed', '__return_false');
 		add_filter('protected_title_format', array($this, 'protected_title_format'));
 		add_filter('private_title_format', array($this, 'private_title_format'));
-		#add_filter('the_title', array($this, 'the_title'));
 		add_filter('get_wp_title_rss', array($this, 'get_wp_title_rss'));
 		add_filter('the_author', array($this, 'the_author'));
 
 		add_action('pre_ping', array($this, 'no_self_ping'));
-		add_action('pings_open', array($this, 'pings_open'));
+		add_action('pings_open', '__return_false');
 
 		remove_filter('the_content', 'convert_smilies', 20);
 	}
@@ -300,7 +297,7 @@ class Halftheory_Clean {
 		}
 
 		// Twitter Card
-		echo '<meta name="twitter:card" value="summary" />'."\n";
+		echo '<meta name="twitter:card" content="summary" />'."\n";
 
 		// Open Graph
 		foreach ($og as $key => $value) {
@@ -308,16 +305,6 @@ class Halftheory_Clean {
 				echo '<meta property="og:'.$key.'" content="'.$value.'" />'."\n";
 			}
 		}
-	}
-
-	public function site_icon_meta_tags($meta_tags = array()) {
-		/*
-		postmeta
-		_wp_attachment_context = site-icon
-		has_site_icon()
-		get_site_icon_url() // max 512x512
-		*/
-		return $meta_tags;
 	}
 
 	public function wp_site_icon() {
@@ -401,18 +388,6 @@ class Halftheory_Clean {
 	public function private_title_format($title, $post = 0) {
 		return str_replace('Private: ', '', $title);
 	}
-	public function the_title($title, $id = 0) {
-		if (is_front_end()) {
-			$pattern = array();
-			$pattern[0] = '/Protected:/';
-			$pattern[1] = '/Private:/';
-			$replacement = array();
-			$replacement[0] = ''; // Enter some text to put in place of Protected:
-			$replacement[1] = ''; // Enter some text to put in place of Private:
-			$title = preg_replace($pattern, $replacement, $title);
-		}
-		return $title;
-	}
 
 	public function get_wp_title_rss($str) {
 		$str .= ' - '.get_bloginfo('description');
@@ -420,7 +395,7 @@ class Halftheory_Clean {
 	}
 
 	public function the_author($str) {
-		if (is_front_end()) {
+		if (is_front_end() && is_multisite()) {
 			global $post;
 			if (is_super_admin($post->post_author)) {
 				$str = get_bloginfo('name');
@@ -436,10 +411,6 @@ class Halftheory_Clean {
 				unset($links[$l]);
 			}
 		}
-	}
-
-	public function pings_open($open) {
-		return false;
 	}
 
 	public function get_title_ancestors($title = '', $current_filter = '') {

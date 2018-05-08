@@ -5,7 +5,7 @@ defined('ABSPATH') || exit;
 if (!class_exists('Child_Theme')) :
 
 @include_once(get_template_directory().'/functions-common.php');
-@include_once(get_template_directory().'/class.halftheory-clean.php');
+@include_once(get_template_directory().'/class-halftheory-clean.php');
 
 if (class_exists('Halftheory_Clean')) :
 class Child_Theme extends Halftheory_Clean {
