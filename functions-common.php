@@ -2,7 +2,7 @@
 // Exit if accessed directly.
 defined('ABSPATH') || exit;
 
-/* functions*/
+/*functions*/
 
 if (!function_exists('make_array')) {
 	function make_array($str = '', $sep = ',') {
