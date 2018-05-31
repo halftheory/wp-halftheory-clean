@@ -2,6 +2,7 @@
 // Exit if accessed directly.
 defined('ABSPATH') || exit;
 ?>
+<!-- #header -->
 <?php get_header(); ?>
 
 		<div id="primary" class="content">
@@ -54,4 +55,5 @@ defined('ABSPATH') || exit;
 		</div><!-- #primary -->
 
 <?php get_sidebar(); ?>
+<!-- #footer -->
 <?php get_footer(); ?>

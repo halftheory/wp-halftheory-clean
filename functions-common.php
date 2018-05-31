@@ -353,105 +353,106 @@ if (!function_exists('strip_tags_attr')) {
 		if ($has_tags === false) {
 			return $str;
 		}
-		else {
-			if (function_exists('trim_excess_space')) {
-				$str = trim_excess_space($str);
+		if (function_exists('trim_excess_space')) {
+			$str = trim_excess_space($str);
+		}
+		$text_tags = array(
+			'b',
+			'blockquote',
+			'del',
+			'div',
+			'em',
+			'h1',
+			'h2',
+			'h3',
+			'h4',
+			'h5',
+			'h6',
+			'i',
+			'p',
+			'span',
+			'strong',
+			'u',
+		);
+		$void_tags = array(
+			'area',
+			'base',
+			'br',
+			'col',
+			'command',
+			'embed',
+			'hr',
+			'img',
+			'input',
+			'keygen',
+			'link',
+			'menuitem',
+			'meta',
+			'param',
+			'source',
+			'track',
+			'wbr',
+		);
+		$wrapper = 'domwrapper';
+		$dom = @DOMDocument::loadHTML( '<'.$wrapper.'>'.mb_convert_encoding($str, 'HTML-ENTITIES', 'UTF-8').'</'.$wrapper.'>', LIBXML_HTML_NOIMPLIED|LIBXML_HTML_NODEFDTD );
+		$dom->formatOutput = true;
+		$dom->preserveWhiteSpace = false;
+		$xpath = new DOMXPath($dom);
+		#$tags = $xpath->query('//*');
+		$tags = $xpath->query('//*[not(self::br)][not(descendant-or-self::pre)][not(descendant-or-self::script)][not(descendant-or-self::style)]');
+		$domElemsToRemove = array();
+		foreach ($tags as $tag) {
+			$my_tag = $tag->tagName;
+			if ($my_tag == $wrapper) {
+				continue;
 			}
-			$text_tags = array(
-				'b',
-				'blockquote',
-				'del',
-				'div',
-				'em',
-				'h1',
-				'h2',
-				'h3',
-				'h4',
-				'h5',
-				'h6',
-				'i',
-				'p',
-				'span',
-				'strong',
-				'u',
-			);
-			$void_tags = array(
-				'area',
-				'base',
-				'br',
-				'col',
-				'command',
-				'embed',
-				'hr',
-				'img',
-				'input',
-				'keygen',
-				'link',
-				'menuitem',
-				'meta',
-				'param',
-				'source',
-				'track',
-				'wbr',
-			);
-			$wrapper = 'domwrapper';
-			$dom = @DOMDocument::loadHTML( '<'.$wrapper.'>'.mb_convert_encoding($str, 'HTML-ENTITIES', 'UTF-8').'</'.$wrapper.'>', LIBXML_HTML_NOIMPLIED|LIBXML_HTML_NODEFDTD );
-			$dom->formatOutput = true;
-			$dom->preserveWhiteSpace = false;
-			$xpath = new DOMXPath($dom);
-			#$tags = $xpath->query('//*');
-			$tags = $xpath->query('//*[not(self::br)]');
-			$domElemsToRemove = array();
-			foreach ($tags as $tag) {
-				$my_tag = $tag->tagName;
-				if ($my_tag == $wrapper) {
+			if (!array_key_exists($my_tag, $allowable_tags_attr)) {
+				continue;
+			}
+			if ($allowable_tags_attr[$my_tag] === '*') {
+				continue;
+			}
+			// remove empty, only for text-tags (probably)
+			if (empty($allowable_tags_attr[$my_tag]) && in_array($my_tag, $text_tags) && !in_array($my_tag, $void_tags)) {
+				if (trim($tag->nodeValue) == "" && $tag->childNodes->length == 0) {
+					$domElemsToRemove[] = $tag;
 					continue;
-				}
-				if (!array_key_exists($my_tag, $allowable_tags_attr)) {
-					continue;
-				}
-				if ($allowable_tags_attr[$my_tag] === '*') {
-					continue;
-				}
-				// remove empty, only for text-tags (probably)
-				if (empty($allowable_tags_attr[$my_tag]) && in_array($my_tag, $text_tags) && !in_array($my_tag, $void_tags)) {
-					if (trim($tag->nodeValue) == "" && $tag->childNodes->length == 0) {
-						$domElemsToRemove[] = $tag;
-						continue;
-					}
-				}
-				if ($tag->attributes->length == 0) {
-					continue;
-				}
-				// remove attr
-				if (!is_array($allowable_tags_attr[$my_tag])) {
-					$allowable_tags_attr[$my_tag] = explode(",", $allowable_tags_attr[$my_tag]);
-					$allowable_tags_attr[$my_tag] = array_map('trim', $allowable_tags_attr[$my_tag]);
-					$allowable_tags_attr[$my_tag] = array_filter($allowable_tags_attr[$my_tag]);
-				}
-				$remove = array();
-				for ($i = 0; $i < $tag->attributes->length; $i++) {
-					$my_attr = $tag->attributes->item($i)->name;
-					if (!in_array($my_attr, $allowable_tags_attr[$my_tag])) {
-						$remove[] = $my_attr;
-					}
-				}
-				if (!empty($remove)) {
-					foreach ($remove as $value) {
-						$tag->removeAttribute($value);
-					}
 				}
 			}
-			foreach($domElemsToRemove as $domElement) {
-				$domElement->parentNode->removeChild($domElement);
+			if ($tag->attributes->length == 0) {
+				continue;
 			}
-			$str = trim( strip_tags( html_entity_decode( $dom->saveHTML() ), $allowable_tags ) );
-			// wp adds single space before closer, so we should match it
-			preg_match_all("/(<(".implode("|", $void_tags).") [^>]+)>/is", $str, $matches);
-			if ($matches[0][0]) {
-				foreach ($matches[0] as $key => $value) {
-					$str = str_replace($value, rtrim($matches[1][$key], '/ ').' />', $str);
+			// remove attr
+			if (function_exists('make_array')) {
+				$allowable_tags_attr[$my_tag] = make_array($allowable_tags_attr[$my_tag]);
+			}
+			elseif (!is_array($allowable_tags_attr[$my_tag])) {
+				$allowable_tags_attr[$my_tag] = explode(",", $allowable_tags_attr[$my_tag]);
+				$allowable_tags_attr[$my_tag] = array_map('trim', $allowable_tags_attr[$my_tag]);
+				$allowable_tags_attr[$my_tag] = array_filter($allowable_tags_attr[$my_tag]);
+			}
+			$remove = array();
+			for ($i = 0; $i < $tag->attributes->length; $i++) {
+				$my_attr = $tag->attributes->item($i)->name;
+				if (!in_array($my_attr, $allowable_tags_attr[$my_tag])) {
+					$remove[] = $my_attr;
 				}
+			}
+			if (!empty($remove)) {
+				foreach ($remove as $value) {
+					$tag->removeAttribute($value);
+				}
+			}
+		}
+		foreach($domElemsToRemove as $domElement) {
+			$domElement->parentNode->removeChild($domElement);
+		}
+		$str = trim( strip_tags( html_entity_decode( $dom->saveHTML() ), $allowable_tags ) );
+		// wp adds single space before closer, so we should match it
+		preg_match_all("/(<(".implode("|", $void_tags).") [^>]+)>/is", $str, $matches);
+		if ($matches[0][0]) {
+			foreach ($matches[0] as $key => $value) {
+				$str = str_replace($value, rtrim($matches[1][$key], '/ ').' />', $str);
 			}
 		}
 		return $str;
