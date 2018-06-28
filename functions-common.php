@@ -605,7 +605,7 @@ if (!function_exists('get_excerpt')) {
 						$replaced = true;
 					}
 				}
-				elseif (preg_match("~^[\s]*$value~i", $text, $match)) {
+				elseif (preg_match("~^[\s]*".preg_quote($value, '/')."~i", $text, $match)) {
 					$len_res = mb_strlen($text);
 					$len_value = mb_strlen($match[0]);
 					if ($len_res > $len_value) {
