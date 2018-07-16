@@ -200,6 +200,62 @@ if (!function_exists('url_exists')) {
 	}
 }
 
+if (!function_exists('get_file_contents')) {
+	function get_file_contents($url = '') {
+		if (empty($url)) {
+			return false;
+		}
+		$str = '';
+		// use user_agent when available
+		$user_agent = 'PHP'.phpversion().'/'.__FUNCTION__;
+		if (isset($_SERVER["HTTP_USER_AGENT"]) && !empty($_SERVER["HTTP_USER_AGENT"])) {
+			$user_agent = $_SERVER["HTTP_USER_AGENT"];
+		}
+		// try php
+		$options = array('http' => array('user_agent' => $user_agent));
+		// try 'correct' way
+		if ($str_php = @file_get_contents($url, false, stream_context_create($options))) {
+			$str = $str_php;
+		}
+		// try 'insecure' way
+		if (empty($str)) {
+			$options['ssl'] = array(
+				'verify_peer' => false,
+				'verify_peer_name' => false,
+			);
+			if ($str_php = @file_get_contents($url, false, stream_context_create($options))) {
+				$str = $str_php;
+			}
+		}
+		// try curl
+		if (empty($str)) {
+			if (function_exists('curl_init')) {
+				$c = @curl_init();
+				// try 'correct' way
+				curl_setopt($c, CURLOPT_URL, $url);
+                curl_setopt($c, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($c, CURLOPT_FOLLOWLOCATION, true);
+                curl_setopt($c, CURLOPT_MAXREDIRS, 10);
+                $str = curl_exec($c);
+                // try 'insecure' way
+                if (empty($str)) {
+                    curl_setopt($c, CURLOPT_URL, $url);
+                    curl_setopt($c, CURLOPT_RETURNTRANSFER, true);
+                    curl_setopt($c, CURLOPT_SSL_VERIFYPEER, false);
+                    curl_setopt($c, CURLOPT_SSL_VERIFYHOST, 0);
+                    curl_setopt($c, CURLOPT_USERAGENT, $user_agent);
+                    $str = curl_exec($c);
+                }
+				curl_close($c);
+			}
+		}
+		if (empty($str)) {
+			return false;
+		}
+		return $str;
+	}
+}
+
 if (!function_exists('get_visitor_ip')) {
 	function get_visitor_ip() {
 		if (is_localhost()) {
