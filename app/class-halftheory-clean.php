@@ -5,8 +5,11 @@ defined('ABSPATH') || exit;
 if (!class_exists('Halftheory_Clean')) :
 class Halftheory_Clean {
 
+	public static $plugins = array();
+
 	public function __construct() {
 		$this->setup_globals();
+		$this->setup_plugins();
 		$this->setup_actions();
 	}
 
@@ -15,6 +18,41 @@ class Halftheory_Clean {
 		$this->plugin_title = ucwords(str_replace('_', ' ', $this->plugin_name));
 		$this->prefix = sanitize_key($this->plugin_name);
 		$this->prefix = preg_replace("/[^a-z0-9]/", "", $this->prefix);
+	}
+
+	protected function setup_plugins() {
+		// only do this once
+		if (!empty(self::$plugins)) {
+			return;
+		}
+		$active_plugins = wp_get_active_and_valid_plugins();
+		if (is_multisite()) {
+			$active_sitewide_plugins = wp_get_active_network_plugins();
+			$active_plugins = array_merge($active_plugins, $active_sitewide_plugins);
+		}
+		if (empty($active_plugins)) {
+			return;
+		}
+		$func = function($plugin) {
+			return str_replace(WP_PLUGIN_DIR.'/', '', $plugin);
+		};
+		$active_plugins = array_map($func, $active_plugins);
+		foreach ($active_plugins as $key => $value) {
+			if (isset(self::$plugins[$value])) {
+				continue;
+			}
+			$plugin = false;
+			if (is_child_theme() && is_readable(get_stylesheet_directory().'/app/plugins/'.$value)) {
+				@include_once(get_stylesheet_directory().'/app/plugins/'.$value);
+			}
+			elseif (is_readable(__DIR__.'/plugins/'.$value)) {
+				@include_once(__DIR__.'/plugins/'.$value);
+			}
+			if ($plugin && class_exists($plugin, false)) {
+				self::$plugins[$value] = new $plugin();
+				unset($plugin);
+			}
+		}
 	}
 
 	protected function setup_actions() {
@@ -27,6 +65,7 @@ class Halftheory_Clean {
 		add_action('widgets_init', array($this, 'widgets_init_remove_recent_comments'), 20);
 		add_action('widgets_init', array($this, 'widgets_init'), 20);
 		add_action('wp_enqueue_scripts', array($this, 'wp_enqueue_scripts'), 20);
+		add_filter('wp_default_scripts', array($this, 'wp_default_scripts_remove_jquery_migrate'));
 
 		add_action('wp', function() {
 			remove_action('wp_head', 'feed_links_extra', 3);
@@ -55,11 +94,42 @@ class Halftheory_Clean {
 		add_action('pings_open', '__return_false');
 
 		remove_filter('the_content', 'convert_smilies', 20);
+
+		add_filter('automatic_updater_disabled', '__return_true');
 	}
 
 	/* install */
 
 	public static function activation($old_theme_name = false, $old_theme_class = false) {
+		$defaults = array(
+			// General
+			'users_can_register' => 0,
+			// Discussion
+			'default_pingback_flag' => '',
+			'default_ping_status' => 'closed',
+			'default_comment_status' => 'closed',
+			'require_name_email' => 1,
+			'comment_registration' => 1,
+			'comments_notify' => 1,
+			'moderation_notify' => 1,
+			'comment_moderation' => 1,
+			'comment_whitelist' => 1,
+			'show_avatars' => '',
+			// Media
+			'thumbnail_crop' => 1,
+			'thumbnail_size_w' => 300,
+			'thumbnail_size_h' => 300,
+			'medium_size_w' => 600,
+			'medium_size_h' => 600,
+			'medium_large_size_w' => 1000,
+			'medium_large_size_h' => 1000,
+			'large_size_w' => 2000,
+			'large_size_h' => 2000,
+			'uploads_use_yearmonth_folders' => '',
+		);
+		foreach ($defaults as $key => $value) {
+			update_option($key, $value);
+		}
 		flush_rewrite_rules();
 	}
 
@@ -193,6 +263,13 @@ class Halftheory_Clean {
 		wp_enqueue_style('theme-style', get_stylesheet_uri(), array(), filemtime(get_stylesheet_directory().'/style.css'));
 		// footer
 		wp_deregister_script('wp-embed');
+	}
+	public function wp_default_scripts_remove_jquery_migrate(&$scripts) {
+		if (!is_front_end()) {
+			return;
+		}
+		$scripts->remove('jquery');
+		$scripts->add('jquery', false, array('jquery-core'), '1.12.4');
 	}
 
 	public function wp_head() {
@@ -413,6 +490,8 @@ class Halftheory_Clean {
 		}
 	}
 
+	/* functions */
+
 	public function get_title_ancestors($title = '', $current_filter = '') {
 		$ancestors = array(
 			get_bloginfo('name'),
@@ -483,11 +562,10 @@ class Halftheory_Clean {
 		return apply_filters($this->prefix.'_get_title_ancestors', array($title, $ancestors));
 	}
 
-	public function post_thumbnail() {
+	public static function post_thumbnail() {
 		if ( post_password_required() || is_attachment() || !has_post_thumbnail() ) {
 			return;
 		}
-
 		if (is_singular()) :
 		?>
 		<div class="post-thumbnail">
@@ -495,15 +573,13 @@ class Halftheory_Clean {
 				<?php the_post_thumbnail( 'post-thumbnail', array( 'alt' => the_title_attribute( 'echo=0' ) ) ); ?>
 			</a>
 		</div><!-- .post-thumbnail -->
-
 		<?php else : ?>
-
 		<div class="post-thumbnail">
 			<a class="post-thumbnail" href="<?php the_permalink(); ?>" aria-hidden="true">
 				<?php the_post_thumbnail( 'post-thumbnail', array( 'alt' => the_title_attribute( 'echo=0' ) ) ); ?>
 			</a>
 		</div><!-- .post-thumbnail -->
-		<?php endif; // End is_singular()
+		<?php endif;
 	}
 
 }
