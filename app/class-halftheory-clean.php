@@ -200,6 +200,7 @@ class Halftheory_Clean {
 		remove_post_type_support('page', 'comments');
 		remove_post_type_support('post', 'comments');
 		remove_post_type_support('post', 'trackbacks');
+		add_post_type_support('page', 'excerpt');
 	}
 
 	public function widgets_init_remove_recent_comments() {
@@ -278,6 +279,9 @@ class Halftheory_Clean {
 		}
 
 		global $post;
+		if (empty($post)) {
+			return;
+		}
 
 		list($title, $ancestors) = $this->get_title_ancestors('', current_filter());
 		$itemprop = array(
@@ -416,6 +420,7 @@ class Halftheory_Clean {
 			$favicon_uri = site_url('/'); // requires htaccess mod_rewrite
 		}
 		// favicons
+		$favicon_uri = set_url_scheme($favicon_uri);
 		// http://www.favicon-generator.org/
 		echo '<link rel="shortcut icon" type="image/x-icon" href="'.$favicon_uri.'favicon.ico" />'."\n";
 		echo '<link rel="icon" type="image/x-icon" href="'.$favicon_uri.'favicon.ico" />'."\n";
