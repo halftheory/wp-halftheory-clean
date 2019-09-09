@@ -9,6 +9,9 @@ if (!is_child_theme()) {
 else {
 	@include_once(get_template_directory().'/app/functions-common.php');
 }
+if (!class_exists('Halftheory_Plugin_Helper')) {
+	@include_once(dirname(__FILE__).'/app/class-halftheory-plugin-helper.php');
+}
 /* actions */
 if (!class_exists('Halftheory_Clean')) {
 	@include_once(dirname(__FILE__).'/app/class-halftheory-clean.php');
