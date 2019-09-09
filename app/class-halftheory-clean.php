@@ -84,15 +84,16 @@ class Halftheory_Clean {
 		add_action('wp_head', array($this, 'wp_site_icon'), 100);
 		remove_filter('wp_title', 'wptexturize');
 		add_filter('wp_title', array($this, 'wp_title'));
-		add_filter('feed_links_show_comments_feed', '__return_false');
 		add_filter('protected_title_format', array($this, 'protected_title_format'));
 		add_filter('private_title_format', array($this, 'private_title_format'));
 		add_filter('get_wp_title_rss', array($this, 'get_wp_title_rss'));
 		add_filter('the_author', array($this, 'the_author'));
-
 		add_action('pre_ping', array($this, 'no_self_ping'));
-		add_action('pings_open', '__return_false');
 
+		add_filter('xmlrpc_enabled', '__return_false');
+		add_action('pings_open', '__return_false');
+		add_filter('comments_open', '__return_false', 10, 2);
+		add_filter('feed_links_show_comments_feed', '__return_false');
 		remove_filter('the_content', 'convert_smilies', 20);
 
 		add_filter('automatic_updater_disabled', '__return_true');

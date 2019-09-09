@@ -1,8 +1,38 @@
 <?php
+if (strpos($_SERVER['HTTP_HOST'], 'local') === false) {
 // Exit if accessed directly.
 defined('ABSPATH') || exit;
+}
 
 /* functions */
+
+if (!function_exists('is_true')) {
+	function is_true($value) {
+		if (is_bool($value)) {
+			return $value;
+		}
+		elseif (empty($value)) {
+			return false;
+		}
+		if (is_numeric($value)) {
+			if ((int)$value === 1) {
+				return true;
+			}
+			elseif ((int)$value === 0) {
+				return false;
+			}
+		}
+		if (is_string($value)) {
+			if ($value == '1' || $value == 'true') {
+				return true;
+			}
+			elseif ($value == '0' || $value == 'false') {
+				return false;
+			}
+		}
+		return false;
+	}
+}
 
 if (!function_exists('make_array')) {
 	function make_array($str = '', $sep = ',') {
@@ -200,10 +230,20 @@ if (!function_exists('url_exists')) {
 	}
 }
 
-if (!function_exists('get_file_contents')) {
-	function get_file_contents($url = '') {
-		if (empty($url)) {
+// replaces old 'get_file_contents' function
+if (!function_exists('file_get_contents_extended')) {
+	function file_get_contents_extended($filename = '') {
+		if (empty($filename)) {
 			return false;
+		}
+		$is_url = false;
+		if (strpos($filename, 'http') === 0) {
+			if (function_exists('url_exists')) {
+				if (url_exists($filename) === false) {
+					return false;
+				}
+			}
+			$is_url = true;
 		}
 		$str = '';
 		// use user_agent when available
@@ -214,7 +254,7 @@ if (!function_exists('get_file_contents')) {
 		// try php
 		$options = array('http' => array('user_agent' => $user_agent));
 		// try 'correct' way
-		if ($str_php = @file_get_contents($url, false, stream_context_create($options))) {
+		if ($str_php = @file_get_contents($filename, false, stream_context_create($options))) {
 			$str = $str_php;
 		}
 		// try 'insecure' way
@@ -223,23 +263,23 @@ if (!function_exists('get_file_contents')) {
 				'verify_peer' => false,
 				'verify_peer_name' => false,
 			);
-			if ($str_php = @file_get_contents($url, false, stream_context_create($options))) {
+			if ($str_php = @file_get_contents($filename, false, stream_context_create($options))) {
 				$str = $str_php;
 			}
 		}
 		// try curl
-		if (empty($str)) {
+		if (empty($str) && $is_url) {
 			if (function_exists('curl_init')) {
 				$c = @curl_init();
 				// try 'correct' way
-				curl_setopt($c, CURLOPT_URL, $url);
+				curl_setopt($c, CURLOPT_URL, $filename);
                 curl_setopt($c, CURLOPT_RETURNTRANSFER, true);
                 curl_setopt($c, CURLOPT_FOLLOWLOCATION, true);
                 curl_setopt($c, CURLOPT_MAXREDIRS, 10);
                 $str = curl_exec($c);
                 // try 'insecure' way
                 if (empty($str)) {
-                    curl_setopt($c, CURLOPT_URL, $url);
+                    curl_setopt($c, CURLOPT_URL, $filename);
                     curl_setopt($c, CURLOPT_RETURNTRANSFER, true);
                     curl_setopt($c, CURLOPT_SSL_VERIFYPEER, false);
                     curl_setopt($c, CURLOPT_SSL_VERIFYHOST, 0);
@@ -248,6 +288,12 @@ if (!function_exists('get_file_contents')) {
                 }
 				curl_close($c);
 			}
+		}
+		if (function_exists('fix_potential_html_string')) {
+			$str = fix_potential_html_string($str);
+		}
+		if (function_exists('trim_excess_space')) {
+			$str = trim_excess_space($str);
 		}
 		if (empty($str)) {
 			return false;
@@ -469,8 +515,8 @@ if (!function_exists('strip_tags_attr')) {
 				continue;
 			}
 			// remove empty, only for text-tags (probably)
-			if (empty($allowable_tags_attr[$my_tag]) && in_array($my_tag, $text_tags) && !in_array($my_tag, $void_tags)) {
-				if (trim($tag->nodeValue) == "" && $tag->childNodes->length == 0) {
+			if (in_array($my_tag, $text_tags) && !in_array($my_tag, $void_tags)) {
+				if (trim($tag->nodeValue) == "" && $tag->childNodes->length == 0 && (empty($allowable_tags_attr[$my_tag]) || $tag->attributes->length == 0)) {
 					$domElemsToRemove[] = $tag;
 					continue;
 				}
@@ -504,9 +550,12 @@ if (!function_exists('strip_tags_attr')) {
 			$domElement->parentNode->removeChild($domElement);
 		}
 		$str = trim( strip_tags( html_entity_decode( $dom->saveHTML() ), $allowable_tags ) );
+		if (!empty($domElemsToRemove) && function_exists('trim_excess_space')) {
+			$str = trim_excess_space($str);
+		}
 		// wp adds single space before closer, so we should match it
 		preg_match_all("/(<(".implode("|", $void_tags).") [^>]+)>/is", $str, $matches);
-		if ($matches[0][0]) {
+		if (isset($matches[0][0])) {
 			foreach ($matches[0] as $key => $value) {
 				$str = str_replace($value, rtrim($matches[1][$key], '/ ').' />', $str);
 			}
@@ -913,6 +962,130 @@ if (!function_exists('get_the_page_thumbnail')) {
 if (!function_exists('the_page_thumbnail')) {
 	function the_page_thumbnail($id = null, $size = 'thumbnail', $custom_logo = false, $attr = array()) {
 		echo get_the_page_thumbnail($id, $size, $custom_logo, $attr);
+	}
+}
+
+if (!function_exists('get_fresh_file_or_transient_contents')) {
+	function get_fresh_file_or_transient_contents($localfile_or_transient, $remotefile_or_callback, $expiration = "1 week", $force_refresh = false) {
+		// NOTE: $expiration is 0, string, or time()
+		$str = '';
+		$refresh = false;
+		$is_transient = false;
+		// 1. get current string + decide if we should refresh
+		// transient
+		// TODO: more ideal transient detection?
+		if (!is_file($localfile_or_transient) && strpos($localfile_or_transient, '/') === false && strpos($localfile_or_transient, '.') === false) {
+			$is_transient = true;
+			$localfile_or_transient = substr($localfile_or_transient, 0, 172);
+			$str_new = get_transient($localfile_or_transient);
+			if ($str_new !== false) {
+				$str = $str_new;
+				if ($expiration !== 0) {
+					$expiration_check = false;
+					if (is_string($expiration)) {
+						$expiration_check = strtotime('-'.trim($expiration, " -+"));
+					}
+					elseif (is_numeric($expiration)) {
+						$expiration_check = (int)$expiration;
+					}
+					if ($expiration_check) {
+						$timeout = get_option('_transient_timeout_'.$localfile_or_transient);
+						if (is_numeric($timeout) && $timeout !== false) {
+							if ((int)$timeout < $expiration_check) {
+								$refresh = true;
+							}
+						}
+					}
+				}
+			}
+			else {
+				$refresh = true;
+			}
+		}
+		// file
+		elseif (is_file($localfile_or_transient)) {
+			if (function_exists('file_get_contents_extended')) {
+				$str_new = file_get_contents_extended($localfile_or_transient);
+			}
+			else {
+				$str_new = @file_get_contents($localfile_or_transient);
+			}
+			if ($str_new !== false) {
+				$str = $str_new;
+				if ($expiration !== 0) {
+					$expiration_check = false;
+					if (is_string($expiration)) {
+						$expiration_check = strtotime('-'.trim($expiration, " -+"));
+					}
+					elseif (is_numeric($expiration)) {
+						$expiration_check = (int)$expiration;
+					}
+					if ($expiration_check) {
+						if (filemtime($localfile_or_transient) < $expiration_check) {
+							$refresh = true;
+						}
+					}
+				}
+			}
+			else {
+				$refresh = true;
+			}
+		}
+		else {
+			$refresh = true;
+		}
+		// 2. get new		
+		if ($refresh || $force_refresh) {
+			echo 'refresh ';
+			// callback function
+			if (is_callable($remotefile_or_callback)) {
+				$str_new = $remotefile_or_callback();
+			}
+			// file, url
+			else {
+				if (function_exists('file_get_contents_extended')) {
+					$str_new = file_get_contents_extended($remotefile_or_callback);
+				}
+				else {
+					$str_new = @file_get_contents($remotefile_or_callback);
+				}
+			}
+			// success - save
+			if ($str_new !== false) {
+				$str = $str_new;
+				// set transient
+				if ($is_transient) {
+					$expiration_transient = false;
+					if ($expiration === 0) {
+						$expiration_transient = 0;
+					}
+					elseif (is_string($expiration)) {
+						$expiration_transient = strtotime('+'.trim($expiration, " -+")) - time();
+					}
+					elseif (is_numeric($expiration)) {
+						$expiration_transient = (int)$expiration - time();
+					}
+					if (!$expiration_transient || $expiration_transient < 0) {
+						$expiration_transient = 0;
+					}
+					set_transient($localfile_or_transient, $str, $expiration_transient);
+				}
+				// put file
+				else {
+					$dirname = dirname($localfile_or_transient);
+					if (!empty($dirname) && $dirname != $localfile_or_transient) {
+						if ($dirname === '.') {
+							$dirname = __DIR__;
+						}
+						@chmod($dirname, 0777);
+					}
+					if (@file_put_contents($localfile_or_transient, $str)) {
+						@chmod($localfile_or_transient, 0777);
+					}
+				}
+			}
+		}
+		return $str;
 	}
 }
 ?>
