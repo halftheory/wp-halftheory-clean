@@ -105,6 +105,32 @@ if (!function_exists('get_current_uri')) {
 	}
 }
 
+if (!function_exists('set_url_scheme_blob')) {
+	function set_url_scheme_blob($str = '', $scheme = null) {
+		if (strpos($str, 'http') === false) {
+			return $str;
+		}
+		// find scheme
+		if (!$scheme) {
+			$scheme = is_ssl() ? 'https' : 'http';
+		}
+		elseif ($scheme === 'admin' || $scheme === 'login' || $scheme === 'login_post' || $scheme === 'rpc') {
+			$scheme = is_ssl() || force_ssl_admin() ? 'https' : 'http';
+		}
+		elseif ($scheme !== 'http' && $scheme !== 'https' && $scheme !== 'relative') {
+			$scheme = is_ssl() ? 'https' : 'http';
+		}
+		// replace
+		if ($scheme == 'relative') {
+			$str = preg_replace('#\w+://[^/]*#', "", $str);
+		}
+		else {
+			$str = preg_replace('#\w+://#', $scheme.'://', $str);
+		}
+		return $str;
+	}
+}
+
 if (!function_exists('is_front_end')) {
 	function is_front_end() {
 		if (is_admin() && !wp_doing_ajax()) {

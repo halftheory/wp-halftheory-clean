@@ -1,10 +1,15 @@
-.slicknav_menu { display: none; }
+.slicknav_menu { display: none; text-align: left; }
 
 .slicknav_brand { color: #fff; }
 
 .slicknav_brand * { color: inherit; }
 
+.slicknav_brand a:hover, .slicknav_brand a:active, .slicknav_brand a:focus { color: inherit; text-decoration: underline; }
+
+.slicknav_nav a:hover, .slicknav_nav a:active, .slicknav_nav a:focus { text-decoration: none; color: #222; }
+
+.slicknav_nav .slicknav_arrow { color: #fff; }
+
 @media screen and (max-width: 768px) { header #menu, header #logo { display: none; }
   .slicknav_menu { display: block; }
-  #primary, #secondary { float: none; }
-  #secondary { margin-top: 32px; margin-top: 2rem; } }
+  #primary, #secondary { float: none; } }

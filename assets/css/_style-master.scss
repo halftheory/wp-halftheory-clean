@@ -167,3 +167,18 @@ $phone-width: 480px;
 	@include vendor-prefix(#{$property}, $pxValues);
 	@include vendor-prefix(#{$property}, $remValues);
 }
+
+@mixin keyframes($name) {
+	@-webkit-keyframes #{$name} {
+		@content;
+	}
+	@-moz-keyframes #{$name} {
+		@content;
+	}
+	@-o-keyframes #{$name} {
+		@content;
+	}
+	@keyframes #{$name} {
+		@content;
+	}
+}
