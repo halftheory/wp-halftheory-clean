@@ -5,11 +5,25 @@
 
 .slicknav_menu {
 	display:none;
+	text-align: left;
 }
 .slicknav_brand {
 	color: #fff;
 	* {
 		color: inherit;
+	}
+	@include hover {
+		color: inherit;
+		text-decoration: underline;
+	}
+}
+.slicknav_nav {
+	@include hover {
+		text-decoration: none;
+		color: #222;
+	}
+	.slicknav_arrow {
+		color: #fff;
 	}
 }
 @include tablet {
@@ -21,8 +35,5 @@
 	}
 	#primary, #secondary {
 		float: none;
-	}
-	#secondary {
-		@include rem(margin-top, 2);
 	}
 }

@@ -89,6 +89,7 @@ class Halftheory_Clean {
 		add_filter('get_wp_title_rss', array($this, 'get_wp_title_rss'));
 		add_filter('the_author', array($this, 'the_author'));
 		add_action('pre_ping', array($this, 'no_self_ping'));
+		add_filter('the_content', array($this, 'the_content'));
 
 		add_filter('xmlrpc_enabled', '__return_false');
 		add_action('pings_open', '__return_false');
@@ -494,6 +495,30 @@ class Halftheory_Clean {
 				unset($links[$l]);
 			}
 		}
+	}
+
+	public function the_content($str = '') { // after autoembeds (priority 7), before shortcodes (priority 11)
+		if (empty($str)) {
+			return $str;
+		}
+		if (!is_main_query()) {
+			return $str;
+		}
+		if (!in_the_loop()) {
+			return $str;
+		}
+		if (is_archive() || is_author() || is_category() || is_date() || is_search() || is_tag() || is_tax()) {
+			return $str;
+		}
+		if (is_signup_page()) {
+			return $str;
+		}
+		if (is_login_page()) {
+			return $str;
+		}
+		$str = set_url_scheme_blob($str);
+		$str = make_clickable($str);
+		return $str;
 	}
 
 	/* functions */
