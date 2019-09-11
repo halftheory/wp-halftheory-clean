@@ -156,15 +156,12 @@ class Halftheory_Admin_Helper {
 	/* actions */
 
 	public function wp_before_admin_bar_render() {
-		if (!isset($this->wp_before_admin_bar_render_remove)) {
-			return;
-		}
 		if (empty($this->wp_before_admin_bar_render_remove)) {
 			return;
 		}
 		// remove stuff
 		global $wp_admin_bar;
-		foreach ((array)$this->wp_before_admin_bar_render_remove as $value) {
+		foreach ($this->wp_before_admin_bar_render_remove as $value) {
 			$wp_admin_bar->remove_menu($value);
 		}
 	}

@@ -182,3 +182,8 @@ $phone-width: 480px;
 		@content;
 	}
 }
+
+@mixin transition($property: all, $duration: 0.5, $timing-function: ease) {
+	@include vendor-prefix(transition, #{$property} #{$duration}s #{$timing-function});
+	@content;
+}
