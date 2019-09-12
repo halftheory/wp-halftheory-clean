@@ -2,8 +2,8 @@
 // Exit if accessed directly.
 defined('ABSPATH') || exit;
 
-if (!class_exists('Halftheory_Admin_Helper')) :
-class Halftheory_Admin_Helper {
+if (!class_exists('Halftheory_Helper_Admin')) :
+class Halftheory_Helper_Admin {
 
 	public static $current_screen_id;
 	public $wp_before_admin_bar_render_remove = array();

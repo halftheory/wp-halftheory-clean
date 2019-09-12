@@ -5,7 +5,9 @@ defined('ABSPATH') || exit;
 if (!class_exists('Halftheory_Clean')) :
 class Halftheory_Clean {
 
+	public static $prefix = 'halftheoryclean';
 	public static $plugins = array();
+	public $admin = null;
 
 	public function __construct() {
 		$this->setup_globals();
@@ -16,8 +18,8 @@ class Halftheory_Clean {
 	protected function setup_globals() {
 		$this->plugin_name = get_called_class();
 		$this->plugin_title = ucwords(str_replace('_', ' ', $this->plugin_name));
-		$this->prefix = sanitize_key($this->plugin_name);
-		$this->prefix = preg_replace("/[^a-z0-9]/", "", $this->prefix);
+		self::$prefix = sanitize_key($this->plugin_name);
+		self::$prefix = preg_replace("/[^a-z0-9]/", "", self::$prefix);
 	}
 
 	protected function setup_plugins() {
@@ -89,7 +91,7 @@ class Halftheory_Clean {
 		add_filter('get_wp_title_rss', array($this, 'get_wp_title_rss'));
 		add_filter('the_author', array($this, 'the_author'));
 		add_action('pre_ping', array($this, 'no_self_ping'));
-		add_filter('the_content', array($this, 'the_content'));
+		add_filter('the_content', array($this, 'the_content'), 12); // after autoembeds (priority 7), after shortcodes (priority 11)
 
 		add_filter('xmlrpc_enabled', '__return_false');
 		add_action('pings_open', '__return_false');
@@ -98,6 +100,28 @@ class Halftheory_Clean {
 		remove_filter('the_content', 'convert_smilies', 20);
 
 		add_filter('automatic_updater_disabled', '__return_true');
+	}
+
+	/* helpers for child themes - not in parent __construct */
+
+	protected function setup_admin() {
+		if (is_user_logged_in()) {
+			if (!class_exists('Halftheory_Helper_Admin')) {
+				@include_once(dirname(__FILE__).'/helpers/class-halftheory-helper-admin.php');
+			}
+			if (class_exists('Halftheory_Helper_Admin')) {
+				$this->admin = new Halftheory_Helper_Admin();
+			}
+		}
+	}
+
+	protected function setup_helper_infinite_scroll() {
+		if (!class_exists('Halftheory_Helper_Infinite_Scroll')) {
+			@include_once(dirname(__FILE__).'/helpers/class-halftheory-helper-infinite-scroll.php');
+		}
+		if (class_exists('Halftheory_Helper_Infinite_Scroll')) {
+			$this->infinite_scroll = new Halftheory_Helper_Infinite_Scroll();
+		}
 	}
 
 	/* install */
@@ -497,7 +521,7 @@ class Halftheory_Clean {
 		}
 	}
 
-	public function the_content($str = '') { // after autoembeds (priority 7), before shortcodes (priority 11)
+	public function the_content($str = '') {
 		if (empty($str)) {
 			return $str;
 		}
@@ -590,7 +614,7 @@ class Halftheory_Clean {
 		$ancestors = array_unique($ancestors);
 		$ancestors = array_filter($ancestors);
 
-		return apply_filters($this->prefix.'_get_title_ancestors', array($title, $ancestors));
+		return apply_filters(self::$prefix.'_get_title_ancestors', array($title, $ancestors));
 	}
 
 	public static function post_thumbnail() {

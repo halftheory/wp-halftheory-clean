@@ -575,7 +575,8 @@ if (!function_exists('strip_tags_attr')) {
 		foreach($domElemsToRemove as $domElement) {
 			$domElement->parentNode->removeChild($domElement);
 		}
-		$str = trim( strip_tags( html_entity_decode( $dom->saveHTML() ), $allowable_tags ) );
+		#$str = trim( strip_tags( html_entity_decode( $dom->saveHTML() ), $allowable_tags ) );
+		$str = trim( strip_tags( $dom->saveHTML(), $allowable_tags ) ); // conflicts with <3
 		if (!empty($domElemsToRemove) && function_exists('trim_excess_space')) {
 			$str = trim_excess_space($str);
 		}
@@ -853,13 +854,7 @@ if (!function_exists('get_page_thumbnail_id')) {
 		if (!empty($image_id)) {
 			return (int)$image_id;
 		}
-		// 2. get media children
-		$media = get_attached_media('image', $id);
-		if (!empty($media)) {
-			$image_id = key($media);
-			return $image_id;
-		}
-		// 3. use first single image or first gallery image (whatever comes first)
+		// 2. use first single image or first gallery image (whatever comes first)
 		$content = get_post_field('post_content', $id, 'raw');
 		if (!empty($content)) {
 			$single = false;
@@ -907,6 +902,12 @@ if (!function_exists('get_page_thumbnail_id')) {
 				}
 				return $image_id;
 			}
+		}
+		// 3. get media children
+		$media = get_attached_media('image', $id);
+		if (!empty($media)) {
+			$image_id = key($media);
+			return $image_id;
 		}
 		// 4. custom_logo
 		if ($custom_logo) {
