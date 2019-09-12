@@ -9,8 +9,6 @@ if (!class_exists('Halftheory_Clean')) {
 if (!class_exists('Halftheory_Clean_Child_Theme') && class_exists('Halftheory_Clean')) :
 class Halftheory_Clean_Child_Theme extends Halftheory_Clean {
 
-	var $admin = null;
-
 	public function __construct() {
 		parent::__construct();
 		$this->setup_admin();
@@ -28,14 +26,10 @@ class Halftheory_Clean_Child_Theme extends Halftheory_Clean {
 		parent::setup_actions();
 	}
 
-	private function setup_admin() {
-		if (is_user_logged_in()) {
-			if (!class_exists('Halftheory_Admin_Helper')) {
-				@include_once(get_template_directory().'/app/class-halftheory-admin-helper.php');
-			}
-			if (class_exists('Halftheory_Admin_Helper')) {
-				$this->admin = new Halftheory_Admin_Helper();
-			}
+	protected function setup_admin() {
+		parent::setup_admin();
+		if (is_null($this->admin)) {
+			return;
 		}
 	}
 

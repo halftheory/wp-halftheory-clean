@@ -6,11 +6,11 @@ defined('ABSPATH') || exit;
 if (is_child_theme()) {
 	@include_once(get_template_directory().'/app/functions-common.php');
 }
-/* actions */
-if (!class_exists('Child_Theme')) {
+/* theme */
+if (!class_exists('Halftheory_Clean_Child_Theme')) {
 	@include_once(dirname(__FILE__).'/app/class-child-theme.php');
 }
-if (class_exists('Child_Theme')) {
-	$GLOBALS['Child_Theme'] = new Child_Theme();
+if (class_exists('Halftheory_Clean_Child_Theme')) {
+	$GLOBALS['Halftheory_Clean_Child_Theme'] = new Halftheory_Clean_Child_Theme();
 }
 ?>

@@ -5,26 +5,26 @@ defined('ABSPATH') || exit;
 <?php get_header(); ?>
 
 	<div id="primary" class="content">
-	<?php if (have_posts()) : ?>
+	<?php if (is_home_page()) : ?>
+	<?php endif; ?>
 
-		<?php if (is_author()) : ?>
-			<h1><?php the_author(); ?></h1>
-		<?php elseif (is_category()) : ?>
-			<h1><?php the_category(); ?></h1>
-		<?php elseif (is_date()) : ?>
-			<h1><?php _e('Date'); printf(' - %1$s', get_the_time(get_option('date_format'))); ?></h1>
-		<?php elseif (is_search()) : ?>
-			<h1><?php _e('Search Results'); printf(' - "%1$s"', get_search_query()); ?></h1>
-		<?php elseif (is_tag()) : ?>
-			<h1><?php the_tags('Tags - '); ?></h1>
-		<?php elseif (is_tax()) : ?>
-			<h1><?php the_taxonomies(); ?></h1>
-		<?php endif; ?>
+	<?php if (is_author()) : ?>
+		<h1 class="entry-title"><?php the_author(); ?></h1>
+	<?php elseif (is_category()) : ?>
+		<h1 class="entry-title"><?php the_category(); ?></h1>
+	<?php elseif (is_date()) : ?>
+		<h1 class="entry-title"><?php _e('Date'); printf(' - %1$s', get_the_time(get_option('date_format'))); ?></h1>
+	<?php elseif (is_search()) : ?>
+		<h1 class="entry-title"><?php _e('Search Results'); printf(' - "%1$s"', get_search_query()); ?></h1>
+	<?php elseif (is_tag()) : ?>
+		<h1 class="entry-title"><?php the_tags('Tags - '); ?></h1>
+	<?php elseif (is_tax()) : ?>
+		<h1 class="entry-title"><?php the_taxonomies(); ?></h1>
+	<?php elseif (is_404()) : ?>
+		<h1 class="entry-title"><?php _e('404 Error'); ?></h1>
+	<?php endif; ?>
 
-		<?php if (is_home_page()) : ?>
-		<?php endif; ?>
-
-		<?php
+	<?php if (have_posts()) : 
 		// Start the loop.
 		while (have_posts()) : the_post(); ?>
 		<article id="post-<?php the_ID(); ?>" <?php post_class(); ?>>
@@ -36,6 +36,13 @@ defined('ABSPATH') || exit;
 			}
 			the_excerpt();
 		}
+		elseif (is_home_page() && get_option('show_on_front') == 'posts') {
+			the_title('<h2 ><a href="'.esc_url(get_the_permalink()).'">', '</a></h2>');
+			if (method_exists('Halftheory_Clean', 'post_thumbnail')) {
+				Halftheory_Clean::post_thumbnail();
+			}
+			the_content();
+		}
 		else {
 			the_title('<h1>', '</h1>');
 			if (method_exists('Halftheory_Clean', 'post_thumbnail')) {
@@ -43,7 +50,6 @@ defined('ABSPATH') || exit;
 			}
 			the_content();
 		}
-
 		edit_post_link(
 			sprintf(__('Edit').'<span class="screen-reader-text"> "%s"</span>', get_the_title()),
 			'<span class="edit-link">',
@@ -55,8 +61,8 @@ defined('ABSPATH') || exit;
 
 		// Previous/next page navigation.
 		the_posts_pagination(array(
-			'prev_text'          => __('Previous page'),
-			'next_text'          => __('Next page'),
+			'prev_text'          => __('Previous'),
+			'next_text'          => __('Next'),
 			'before_page_number' => '<span class="meta-nav screen-reader-text">'.__('Page').'</span>',
 		));
 

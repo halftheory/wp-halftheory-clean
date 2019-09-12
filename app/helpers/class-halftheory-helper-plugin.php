@@ -2,8 +2,8 @@
 // Exit if accessed directly.
 defined('ABSPATH') || exit;
 
-if (!class_exists('Halftheory_Plugin_Helper')) :
-class Halftheory_Plugin_Helper {
+if (!class_exists('Halftheory_Helper_Plugin')) :
+class Halftheory_Helper_Plugin {
 
 	public static $plugin_basename;
 	public static $prefix;
