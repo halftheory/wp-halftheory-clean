@@ -130,6 +130,8 @@ class Halftheory_Clean {
 		$defaults = array(
 			// General
 			'users_can_register' => 0,
+			'date_format' => 'j F Y',
+			'time_format' => 'g:i A',
 			// Discussion
 			'default_pingback_flag' => '',
 			'default_ping_status' => 'closed',
@@ -152,6 +154,8 @@ class Halftheory_Clean {
 			'large_size_w' => 2000,
 			'large_size_h' => 2000,
 			'uploads_use_yearmonth_folders' => '',
+			// Permalinks
+			'permalink_structure' => '/%category%/%postname%/',
 		);
 		foreach ($defaults as $key => $value) {
 			update_option($key, $value);
