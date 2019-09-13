@@ -40,7 +40,7 @@ defined('ABSPATH') || exit;
 			}
 			the_excerpt();
 		}
-		elseif (is_home_page() && get_post_type() == 'posts' && get_option('show_on_front') == 'posts') {
+		elseif (is_home_page() && get_post_type() == 'post' && get_option('show_on_front') == 'posts') {
 			the_title('<h2 ><a href="'.esc_url(get_the_permalink()).'">', '</a></h2>');
 			if (method_exists('Halftheory_Clean', 'post_thumbnail')) {
 				Halftheory_Clean::post_thumbnail();
