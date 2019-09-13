@@ -12,8 +12,12 @@ defined('ABSPATH') || exit;
 		<h1 class="entry-title"><?php the_author(); ?></h1>
 	<?php elseif (is_category()) : ?>
 		<h1 class="entry-title"><?php the_category(); ?></h1>
-	<?php elseif (is_date()) : ?>
-		<h1 class="entry-title"><?php _e('Date'); printf(' - %1$s', get_the_time(get_option('date_format'))); ?></h1>
+	<?php elseif (is_date()) : 
+		$date_format = get_option('date_format');
+		if (is_year()) { $date_format = 'Y'; }
+		elseif (is_month()) { $date_format = 'F Y'; }
+		?>
+		<h1 class="entry-title"><?php _e('Date'); printf(' - %1$s', get_the_time($date_format)); ?></h1>
 	<?php elseif (is_search()) : ?>
 		<h1 class="entry-title"><?php _e('Search Results'); printf(' - "%1$s"', get_search_query()); ?></h1>
 	<?php elseif (is_tag()) : ?>
@@ -36,7 +40,7 @@ defined('ABSPATH') || exit;
 			}
 			the_excerpt();
 		}
-		elseif (is_home_page() && get_option('show_on_front') == 'posts') {
+		elseif (is_home_page() && get_post_type() == 'posts' && get_option('show_on_front') == 'posts') {
 			the_title('<h2 ><a href="'.esc_url(get_the_permalink()).'">', '</a></h2>');
 			if (method_exists('Halftheory_Clean', 'post_thumbnail')) {
 				Halftheory_Clean::post_thumbnail();
