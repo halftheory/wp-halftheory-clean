@@ -24,6 +24,7 @@ class Halftheory_Clean_Child_Theme extends Halftheory_Clean {
 
 	protected function setup_actions() {
 		parent::setup_actions();
+		parent::setup_helper_infinite_scroll();
 	}
 
 	protected function setup_admin() {
