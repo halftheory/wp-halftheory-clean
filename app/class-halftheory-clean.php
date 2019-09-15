@@ -125,6 +125,15 @@ class Halftheory_Clean {
 		}
 	}
 
+	protected function setup_helper_minify() {
+		if (!class_exists('Halftheory_Helper_Minify')) {
+			@include_once(dirname(__FILE__).'/helpers/class-halftheory-helper-minify.php');
+		}
+		if (class_exists('Halftheory_Helper_Minify')) {
+			$this->minify = new Halftheory_Helper_Minify();
+		}
+	}
+	
 	/* install */
 
 	public static function activation($old_theme_name = false, $old_theme_class = false) {
