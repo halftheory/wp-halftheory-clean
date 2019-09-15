@@ -9,18 +9,23 @@
 }
 .slicknav_brand {
 	color: #fff;
-	* {
-		color: inherit;
+	@include link {
+		color: #fff;
+		text-decoration: none;
 	}
 	@include hover {
-		color: inherit;
+		color: #fff;
 		text-decoration: underline;
 	}
 }
 .slicknav_nav {
-	@include hover {
+	@include link {
+		color: #fff;
 		text-decoration: none;
+	}
+	@include hover {
 		color: #222;
+		text-decoration: none;
 	}
 	.slicknav_arrow {
 		color: #fff;
@@ -32,8 +37,5 @@
 	}	
 	.slicknav_menu {
 		display:block;
-	}
-	#primary, #secondary {
-		float: none;
 	}
 }
