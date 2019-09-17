@@ -14,22 +14,22 @@ if (have_posts()) :
 	while (have_posts()) : the_post(); ?>
 	<article id="post-<?php the_ID(); ?>" <?php post_class(); ?>>
 	<?php
-	if (is_archive() || is_author() || is_category() || is_date() || is_search() || is_tag() || is_tax() || $infinite_scroll_loop_action == 'archive') {
-		the_title('<h2><a href="'.esc_url(get_the_permalink()).'">', '</a></h2>');
+	if (is_archive() || is_author() || is_category() || is_date() || is_post_type_archive() || is_search() || is_tag() || is_tax() || $infinite_scroll_loop_action == 'archive') {
+		the_title('<h2 class="entry-title"><a href="'.esc_url(get_the_permalink()).'">', '</a></h2>');
 		if (method_exists('Halftheory_Clean', 'post_thumbnail')) {
 			Halftheory_Clean::post_thumbnail();
 		}
 		the_excerpt();
 	}
 	elseif ((is_home_page() && get_post_type() == 'post' && get_option('show_on_front') == 'posts') || $infinite_scroll_loop_action == 'posts') {
-		the_title('<h2 ><a href="'.esc_url(get_the_permalink()).'">', '</a></h2>');
+		the_title('<h2 class="entry-title"><a href="'.esc_url(get_the_permalink()).'">', '</a></h2>');
 		if (method_exists('Halftheory_Clean', 'post_thumbnail')) {
 			Halftheory_Clean::post_thumbnail();
 		}
 		the_content();
 	}
 	else {
-		the_title('<h1>', '</h1>');
+		the_title('<h1 class="entry-title">', '</h1>');
 		if (method_exists('Halftheory_Clean', 'post_thumbnail')) {
 			Halftheory_Clean::post_thumbnail();
 		}

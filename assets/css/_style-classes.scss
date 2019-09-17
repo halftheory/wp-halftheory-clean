@@ -20,6 +20,10 @@ $small-size: 0.8;
 	//font-size: 80%;
 	@include rem(font-size, $small-size);
 }
+$smaller-size: 0.7;
+%smaller {
+	@include rem(font-size, $smaller-size);
+}
 
 // common classes
 
