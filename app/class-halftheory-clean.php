@@ -556,13 +556,7 @@ class Halftheory_Clean {
 		if (empty($str)) {
 			return $str;
 		}
-		if (!is_main_query()) {
-			return $str;
-		}
 		if (!in_the_loop()) {
-			return $str;
-		}
-		if (is_archive() || is_author() || is_category() || is_date() || is_post_type_archive() || is_search() || is_tag() || is_tax()) {
 			return $str;
 		}
 		if (is_signup_page()) {
@@ -750,13 +744,16 @@ class Halftheory_Clean {
 		return apply_filters(self::$prefix.'_get_title_ancestors', array($title, $ancestors));
 	}
 
-	public static function post_thumbnail() {
+	public static function post_thumbnail($is_singular = null) {
 		if (post_password_required() || is_attachment() || !has_post_thumbnail()) {
 			return;
 		}
-		if (is_singular()) :
+		if (is_null($is_singular)) {
+			$is_singular = is_singular();
+		}
+		if ($is_singular) :
 		?>
-		<div class="post-thumbnail">
+		<div class="post-thumbnail post-thumbnail-singular">
 			<a class="post-thumbnail" href="<?php the_post_thumbnail_url(); ?>" aria-hidden="true" rel="lightbox-post-thumbnail">
 				<?php the_post_thumbnail( 'post-thumbnail', array('alt' => the_title_attribute('echo=0')) ); ?>
 			</a>
