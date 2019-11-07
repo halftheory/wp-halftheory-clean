@@ -141,7 +141,7 @@ class Halftheory_Helper_Plugin {
         </div><!-- poststuff -->
     	</form>
 
- 		</div><!-- wrap --><?
+ 		</div><!-- wrap --><?php
  	}
 
 	/* functions */
