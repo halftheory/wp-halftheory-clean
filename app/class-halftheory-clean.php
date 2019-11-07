@@ -9,22 +9,24 @@ class Halftheory_Clean {
 	public static $plugins = array();
 	public $admin = null;
 
-	public function __construct() {
+	public function __construct($load_theme = false) {
 		$this->setup_globals();
-		$this->setup_plugins();
-		$this->setup_actions();
+		if ($load_theme) {
+			$this->setup_plugins();
+			$this->setup_actions();
+		}
 	}
 
 	protected function setup_globals() {
 		$this->plugin_name = get_called_class();
 		$this->plugin_title = ucwords(str_replace('_', ' ', $this->plugin_name));
-		self::$prefix = sanitize_key($this->plugin_name);
-		self::$prefix = preg_replace("/[^a-z0-9]/", "", self::$prefix);
+		static::$prefix = sanitize_key($this->plugin_name);
+		static::$prefix = preg_replace("/[^a-z0-9]/", "", static::$prefix);
 	}
 
 	protected function setup_plugins() {
 		// only do this once
-		if (!empty(self::$plugins)) {
+		if (!empty(static::$plugins)) {
 			return;
 		}
 		$active_plugins = wp_get_active_and_valid_plugins();
@@ -40,7 +42,7 @@ class Halftheory_Clean {
 		};
 		$active_plugins = array_map($func, $active_plugins);
 		foreach ($active_plugins as $key => $value) {
-			if (isset(self::$plugins[$value])) {
+			if (isset(static::$plugins[$value])) {
 				continue;
 			}
 			$plugin = false;
@@ -51,7 +53,7 @@ class Halftheory_Clean {
 				@include_once(__DIR__.'/plugins/'.$value);
 			}
 			if ($plugin && class_exists($plugin, false)) {
-				self::$plugins[$value] = new $plugin();
+				static::$plugins[$value] = new $plugin();
 				unset($plugin);
 			}
 		}
@@ -177,6 +179,8 @@ class Halftheory_Clean {
 	public static function deactivation($new_theme_name = false, $new_theme_class = false, $old_theme_class = false) {
 		flush_rewrite_rules();
 	}
+
+	/* actions */
 
 	public function after_setup_theme() { // first available action after plugins_loaded
 		if (is_front_end()) {
@@ -742,7 +746,7 @@ class Halftheory_Clean {
 		$ancestors = array_unique($ancestors);
 		$ancestors = array_filter($ancestors);
 
-		return apply_filters(self::$prefix.'_get_title_ancestors', array($title, $ancestors));
+		return apply_filters(static::$prefix.'_get_title_ancestors', array($title, $ancestors));
 	}
 
 	public static function post_thumbnail($is_singular = null) {

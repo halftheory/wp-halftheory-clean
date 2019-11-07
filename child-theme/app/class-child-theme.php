@@ -7,11 +7,16 @@ if (!class_exists('Halftheory_Clean')) {
 }
 
 if (!class_exists('Halftheory_Clean_Child_Theme') && class_exists('Halftheory_Clean')) :
-class Halftheory_Clean_Child_Theme extends Halftheory_Clean {
+final class Halftheory_Clean_Child_Theme extends Halftheory_Clean {
 
-	public function __construct() {
+	public static $prefix;
+	public static $plugins = array();
+
+	public function __construct($load_theme = false) {
 		parent::__construct();
-		$this->setup_admin();
+		if ($load_theme) {
+			$this->setup_admin();
+		}
 	}
 
 	protected function setup_globals() {

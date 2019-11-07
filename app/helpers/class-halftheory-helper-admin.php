@@ -310,11 +310,11 @@ class Halftheory_Helper_Admin {
 	}
 
 	public function current_screen($current_screen) {
-		self::$current_screen_id = $current_screen->id;
+		static::$current_screen_id = $current_screen->id;
 	}
 
 	public function wp_update_nav_menu($menu_id, $menu_data = null) {
-		if (!in_array(self::$current_screen_id, array('nav-menus'))) {
+		if (!in_array(static::$current_screen_id, array('nav-menus'))) {
 			return;
 		}
 	    if ($menu_data !== null) {
