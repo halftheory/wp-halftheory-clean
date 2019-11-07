@@ -9,17 +9,11 @@ if (!is_child_theme()) {
 else {
 	@include_once(get_template_directory().'/app/functions-common.php');
 }
-/* plugin helper */
-/*
-if (!class_exists('Halftheory_Helper_Plugin')) {
-	@include_once(dirname(__FILE__).'/app/helpers/class-halftheory-helper-plugin.php');
-}
-*/
 /* theme */
 if (!class_exists('Halftheory_Clean')) {
 	@include_once(dirname(__FILE__).'/app/class-halftheory-clean.php');
 }
 if (!is_child_theme()) {
-	$GLOBALS['Halftheory_Clean'] = new Halftheory_Clean();
+	$GLOBALS['Halftheory_Clean'] = new Halftheory_Clean(true);
 }
 ?>
