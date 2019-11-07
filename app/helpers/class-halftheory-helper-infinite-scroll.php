@@ -1,4 +1,10 @@
 <?php
+/*
+Available filters:
+halftheory_helper_infinite_scroll_theme_support
+halftheory_helper_infinite_scroll_template_names
+*/
+
 // Exit if accessed directly.
 defined('ABSPATH') || exit;
 
@@ -59,8 +65,18 @@ class Halftheory_Helper_Infinite_Scroll {
 				$args[$_POST['param']] = $_POST['value'];
 			}
 		}
-		query_posts($args);
-		get_template_part('loop');
+		$posts = query_posts($args);
+		if (empty($posts)) {
+			wp_reset_query();
+			exit;
+		}
+		$template_names = array(
+			'loop.php',
+			'index.php',
+		);
+		$template_names = apply_filters('halftheory_helper_infinite_scroll_template_names', $template_names, $posts, $args);
+		locate_template($template_names, true);
+		wp_reset_query();
 		exit;
 	}
 

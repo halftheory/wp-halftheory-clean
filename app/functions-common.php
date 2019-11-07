@@ -11,10 +11,7 @@ if (!function_exists('is_true')) {
 		if (is_bool($value)) {
 			return $value;
 		}
-		elseif (empty($value)) {
-			return false;
-		}
-		if (is_numeric($value)) {
+		elseif (is_numeric($value)) {
 			if ((int)$value === 1) {
 				return true;
 			}
@@ -22,13 +19,30 @@ if (!function_exists('is_true')) {
 				return false;
 			}
 		}
-		if (is_string($value)) {
+		elseif (is_string($value)) {
 			if ($value == '1' || $value == 'true') {
 				return true;
 			}
 			elseif ($value == '0' || $value == 'false') {
 				return false;
 			}
+		}
+		elseif (empty($value)) {
+			return false;
+		}
+		return false;
+	}
+}
+
+if (!function_exists('empty_notzero')) {
+	function empty_notzero($value) {
+		if (is_numeric($value)) {
+			if ((int)$value === 0) {
+				return false;
+			}
+		}
+		if (empty($value)) {
+			return true;
 		}
 		return false;
 	}
@@ -39,7 +53,7 @@ if (!function_exists('make_array')) {
 		if (is_array($str)) {
 			return $str;
 		}
-		if (empty($str)) {
+		if (empty_notzero($str)) {
 			return array();
 		}
 		$arr = explode($sep, $str);
@@ -925,7 +939,7 @@ if (!function_exists('get_page_thumbnail_id')) {
 					'post_status' => array('publish','inherit'),
 					's' => 'logo',
 				));
-				if (!empty($search)) {
+				if (!empty($search) && !is_wp_error($search)) {
 					$image_id = $search[0]->ID;
 					return $image_id;
 				}

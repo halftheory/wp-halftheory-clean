@@ -1,4 +1,10 @@
 <?php
+/*
+Available filters:
+halftheory_admin_menu_parent
+{self::$prefix}_admin_menu_parent
+*/
+
 // Exit if accessed directly.
 defined('ABSPATH') || exit;
 
@@ -7,10 +13,15 @@ class Halftheory_Helper_Plugin {
 
 	public static $plugin_basename;
 	public static $prefix;
-	private $options = array();
+	public $options = array();
 
-	public function __construct($plugin_basename = '', $prefix = '') {
+	/* setup */
+
+	public function __construct($plugin_basename = '', $prefix = '', $load_actions = true) {
 		$this->init($plugin_basename, $prefix);
+		if ($load_actions) {
+			$this->setup_actions();
+		}
 	}
 
 	public function init($plugin_basename = '', $prefix = '') {
@@ -20,13 +31,139 @@ class Halftheory_Helper_Plugin {
 		if (!empty($plugin_basename)) {
 			self::$plugin_basename = $plugin_basename;
 		}
+		$this->plugin_name = get_called_class();
+		$this->plugin_title = ucwords(str_replace('_', ' ', $this->plugin_name));
 		if (!empty($prefix)) {
 			self::$prefix = $prefix;
+		}
+		else {
+			self::$prefix = sanitize_key($this->plugin_name);
+			self::$prefix = preg_replace("/[^a-z0-9]/", "", self::$prefix);
 		}
 		$this->options = array();
 	}
 
-	private function is_plugin_network() {
+	protected function setup_actions() {
+		// admin options
+		if (!$this->is_front_end()) {
+			if ($this->is_plugin_network()) {
+				add_action('network_admin_menu', array($this,'admin_menu'));
+				if (is_main_site()) {
+					add_action('admin_menu', array($this,'admin_menu'));
+				}
+			}
+			else {
+				add_action('admin_menu', array($this,'admin_menu'));
+			}
+		}
+	}
+
+	/* admin */
+
+	public function admin_menu() {
+		if (empty(self::$prefix)) {
+			return;
+		}
+		if (!is_array($GLOBALS['menu'])) {
+			return;
+		}
+
+		$has_parent = false;
+		$parent_slug = self::$prefix;
+		$parent_name = apply_filters('halftheory_admin_menu_parent', 'Halftheory');
+		$parent_name = apply_filters(self::$prefix.'_admin_menu_parent', $parent_name);
+
+		// set parent to nothing to skip parent menu creation
+		if (empty($parent_name)) {
+			add_options_page(
+				$this->plugin_title,
+				$this->plugin_title,
+				'manage_options',
+				self::$prefix,
+				array($this,'menu_page')
+			);
+			return;
+		}
+
+		// find top level menu if it exists
+	    foreach ($GLOBALS['menu'] as $value) {
+	    	if ($value[0] == $parent_name) {
+	    		$parent_slug = $value[2];
+	    		$has_parent = true;
+	    		break;
+	    	}
+	    }
+
+		// add top level menu if it doesn't exist
+		if (!$has_parent) {
+			add_menu_page(
+				$this->plugin_title,
+				$parent_name,
+				'manage_options',
+				$parent_slug,
+				array($this,'menu_page')
+			);
+		}
+
+		// add the menu
+		add_submenu_page(
+			$parent_slug,
+			$this->plugin_title,
+			$this->plugin_title,
+			'manage_options',
+			self::$prefix,
+			array($this,'menu_page')
+		);
+	}
+
+	public function menu_page() {
+ 		global $title;
+		?>
+		<div class="wrap">
+			<h2><?php echo $title; ?></h2>
+		<?php
+ 		$plugin = new self(self::$plugin_basename, self::$prefix, false);
+
+		if ($plugin->save_menu_page()) {
+			// save
+		}
+ 		?>
+
+	    <form id="<?php echo $plugin::$prefix; ?>-admin-form" name="<?php echo $plugin::$prefix; ?>-admin-form" method="post" action="<?php echo $_SERVER['REQUEST_URI']; ?>">
+		<?php
+		// Use nonce for verification
+		wp_nonce_field(self::$plugin_basename, $plugin->plugin_name.'::'.__FUNCTION__);
+		?>
+	    <div id="poststuff">
+
+        <?php submit_button(__('Update'), array('primary','large'), 'save'); ?>
+
+        </div><!-- poststuff -->
+    	</form>
+
+ 		</div><!-- wrap --><?
+ 	}
+
+	/* functions */
+
+	public function save_menu_page() {
+		if (!isset($_POST['save'])) {
+			return false;
+		}
+		if (empty($_POST['save'])) {
+			return false;
+		}
+		// verify this came from the our screen and with proper authorization
+		if (!isset($_POST[$this->plugin_name.'::menu_page'])) {
+			return false;
+		}
+		if (!wp_verify_nonce($_POST[$this->plugin_name.'::menu_page'], self::$plugin_basename)) {
+			return false;
+		}
+		return true;
+	}
+
+	public function is_plugin_network() {
 		if (isset($this->plugin_is_network)) {
 			return $this->plugin_is_network;
 		}
@@ -72,7 +209,7 @@ class Halftheory_Helper_Plugin {
 			}
 			$this->options[$name] = $option;
 		}
-		if (!empty($key) && is_array($this->options[$name])) {
+		if (!$this->empty_notzero($key) && is_array($this->options[$name])) {
 			if (array_key_exists($key, $this->options[$name])) {
 				return $this->options[$name][$key];
 			}
@@ -233,6 +370,103 @@ class Halftheory_Helper_Plugin {
 		$name = $this->get_usermeta_name($name);
 		global $wpdb;
 		$wpdb->query("DELETE FROM $wpdb->usermeta WHERE meta_key LIKE '".$name."%'");
+	}
+
+	/* functions-common */
+
+	public function is_true($value) {
+		if (function_exists(__FUNCTION__)) {
+			$func = __FUNCTION__;
+			return $func($value);
+		}
+		if (is_bool($value)) {
+			return $value;
+		}
+		elseif (is_numeric($value)) {
+			if ((int)$value === 1) {
+				return true;
+			}
+			elseif ((int)$value === 0) {
+				return false;
+			}
+		}
+		elseif (is_string($value)) {
+			if ($value == '1' || $value == 'true') {
+				return true;
+			}
+			elseif ($value == '0' || $value == 'false') {
+				return false;
+			}
+		}
+		elseif (empty($value)) {
+			return false;
+		}
+		return false;
+	}
+
+	public function empty_notzero($value) {
+		if (function_exists(__FUNCTION__)) {
+			$func = __FUNCTION__;
+			return $func($value);
+		}
+		if (is_numeric($value)) {
+			if ((int)$value === 0) {
+				return false;
+			}
+		}
+		if (empty($value)) {
+			return true;
+		}
+		return false;
+	}
+
+	public function make_array($str = '', $sep = ',') {
+		if (function_exists(__FUNCTION__)) {
+			$func = __FUNCTION__;
+			return $func($str, $sep);
+		}
+		if (is_array($str)) {
+			return $str;
+		}
+		if ($this->empty_notzero($str)) {
+			return array();
+		}
+		$arr = explode($sep, $str);
+		$arr = array_map('trim', $arr);
+		$arr = array_filter($arr);
+		return $arr;
+	}
+
+	public function is_front_end() {
+		if (function_exists(__FUNCTION__)) {
+			$func = __FUNCTION__;
+			return $func();
+		}
+		if (is_admin() && !wp_doing_ajax()) {
+			return false;
+		}
+		if (wp_doing_ajax()) {
+			if (strpos($this->get_current_uri(), admin_url()) !== false) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	public function get_current_uri() {
+		if (function_exists(__FUNCTION__)) {
+			$func = __FUNCTION__;
+			return $func();
+		}
+	 	$res  = is_ssl() ? 'https://' : 'http://';
+	 	$res .= $_SERVER['HTTP_HOST'];
+	 	$res .= $_SERVER['REQUEST_URI'];
+		if (wp_doing_ajax()) {
+			if (!empty($_SERVER["HTTP_REFERER"])) {
+				$res = $_SERVER["HTTP_REFERER"];
+			}
+		}
+		return $res;
 	}
 
 }

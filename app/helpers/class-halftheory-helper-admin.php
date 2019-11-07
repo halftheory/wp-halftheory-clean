@@ -9,6 +9,7 @@ class Halftheory_Helper_Admin {
 	public $wp_before_admin_bar_render_remove = array();
 	public $admin_menu_include = array();
 	public $admin_menu_exclude = array();
+	public $screen_options_show_screen = false;
 
 	public function __construct() {
 	}
@@ -117,6 +118,15 @@ class Halftheory_Helper_Admin {
 				);
 			}
 		}
+		// screen_options_show_screen
+		if (is_super_admin()) {
+			$this->screen_options_show_screen = true;
+		}
+		elseif (is_array($current_user->roles)) {
+			if (in_array('administrator', $current_user->roles)) {
+				$this->screen_options_show_screen = true;
+			}
+		}
 	}
 
 	public function setup_actions() {
@@ -136,7 +146,9 @@ class Halftheory_Helper_Admin {
 		add_action('wp_update_nav_menu', array($this, 'wp_update_nav_menu'), 20, 2);
 		add_filter('heartbeat_settings', array($this, 'heartbeat_settings'));
 		// disable screen options
-		add_filter('screen_options_show_screen', '__return_false', 100);
+		if (!$this->screen_options_show_screen) {
+			add_filter('screen_options_show_screen', '__return_false', 100);
+		}
 		// disable notices
 		remove_action('admin_notices', 'update_nag', 3);
 		remove_action('admin_notices', 'maintenance_nag', 10);
@@ -415,7 +427,7 @@ class Halftheory_Helper_Admin {
 			'orderby' => 'menu_order,post_title',
 			'order' => 'ASC',
         ));
-        if (!empty($posts)) {
+        if (!empty($posts) && !is_wp_error($posts)) {
         	foreach ($posts as $item) {
 				if (in_array($item->ID, $page_structure_flat)) {
 					continue;

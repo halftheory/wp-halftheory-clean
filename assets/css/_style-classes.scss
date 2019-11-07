@@ -40,7 +40,8 @@ $smaller-size: 0.7;
 %clear {
 	clear: both;
 }
-%nobr {
+%nobr,
+%nowrap {
 	white-space: nowrap;
 }
 %float-left {

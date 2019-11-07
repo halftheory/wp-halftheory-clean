@@ -238,6 +238,7 @@ class Halftheory_Clean {
 
 	public function init() {
 		register_nav_menu('primary-menu', 'Primary Menu');
+		remove_post_type_support('attachment', 'comments');
 		remove_post_type_support('page', 'comments');
 		remove_post_type_support('post', 'comments');
 		remove_post_type_support('post', 'trackbacks');
@@ -595,7 +596,7 @@ class Halftheory_Clean {
 		$ancestors = array(
 			get_bloginfo('name'),
 		);
-		$title_new = false;
+		$title_new = null;
 		// some pages don't need more ancestors
 		if (is_author()) {
 			$title = __('Author').': '.get_the_author();
@@ -727,11 +728,11 @@ class Halftheory_Clean {
 			}
 		}
 
-		if (empty($title) && $title_new) {
+		if (empty($title) && !empty($title_new)) {
 			$title = $title_new;
 		}
 		if (empty($title)) {
-			get_bloginfo('name');
+			$title = get_bloginfo('name');
 		}
 
 		$title = sanitize_text_field($title);
