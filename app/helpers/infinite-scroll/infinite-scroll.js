@@ -3,13 +3,14 @@ if (typeof infinite_scroll === 'object') {
 	/** Note: $() will work as an alias for jQuery() inside of this function */
 
 	var update = true;
+	var container_bottom;
 
 	/* functions */
 
 	function containerBottom() {
 		var res;
 		if ($("#"+infinite_scroll.container).length) {
-			res = $("#"+infinite_scroll.container).offset().top + $("#"+infinite_scroll.container).height() - $(window).height();
+			res = $("#"+infinite_scroll.container).offset().top + $("#"+infinite_scroll.container).outerHeight() - $(window).height();
 		}
 		else {
 			res = $(document).height() - $(window).height();
@@ -42,7 +43,9 @@ if (typeof infinite_scroll === 'object') {
 	//document.ready
 	$(document).ready(function($) {
 		var count = 2;
-		var container_bottom;
+		if (infinite_scroll.paged) {
+			count = parseInt(infinite_scroll.paged,10) + 1;
+		}
 
 		//window.load
 		$(window).load(function() {
@@ -79,6 +82,9 @@ if (typeof infinite_scroll === 'object') {
 			if ($(window).scrollTop() >= container_bottom) {
 				loadPage(count);
 				count++;
+			}
+			else {
+				container_bottom = containerBottom();
 			}
 			return true;
 		});
