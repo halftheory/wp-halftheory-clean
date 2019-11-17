@@ -237,12 +237,10 @@ if (!function_exists('is_slug_current')) {
 		if (empty($url)) {
 			$url = get_current_uri();
 		}
-		if (!is_array($slugs)) {
-			$slugs = (array)$slugs;
-			$slugs = array_filter($slugs);
-		}
+		$slugs = make_array($slugs, '/');
+		$slugs = array_filter($slugs);
 		foreach ($slugs as $value) {
-			if (!preg_match("/[a-z0-9]+/i", $value)) {
+			if (!preg_match("/[\w]+/i", $value)) {
 				continue;
 			}
 			if ($value == $url) {
@@ -251,7 +249,6 @@ if (!function_exists('is_slug_current')) {
 			if (strpos($url, $value) !== false) {
 				return true;
 			}
-			# TOTO: preg_match syntax
 		}
 		return false;
 	}
@@ -398,7 +395,7 @@ if (!function_exists('fix_potential_html_string')) {
 			return $str;
 		}
 		if (strpos($str, "&lt;") !== false) {
-			if (substr_count($str, "&lt;") > substr_count($str, "<") || preg_match("/&lt;\/[a-z0-9]+&gt;/is", $str)) {
+			if (substr_count($str, "&lt;") > substr_count($str, "<") || preg_match("/&lt;\/[\w]+&gt;/is", $str)) {
 				$str = html_entity_decode($str, ENT_NOQUOTES, 'UTF-8');
 			}
 		}
@@ -414,9 +411,8 @@ if (!function_exists('trim_excess_space')) {
 		if (empty($str)) {
 			return $str;
 		}
-		$str = str_replace("&nbsp;", ' ', $str);
-		$str = str_replace("&#160;", ' ', $str);
-		$str = str_replace("\xc2\xa0", ' ',$str);
+		$replace_with_space = array("&nbsp;", "&#160;", "\xc2\xa0");
+		$str = str_replace($replace_with_space, ' ', $str);
 
 		if (strpos($str, "</") !== false) {
 			$str = preg_replace("/[\t\n\r ]*(<\/[^>]+>)/s", "$1", $str); // no space before closing tags
@@ -435,11 +431,13 @@ if (!function_exists('strip_tags_html_comments')) {
 		if (empty($str)) {
 			return $str;
 		}
-		$str = str_replace("<!--", "###COMMENT_OPEN###", $str);
-		$str = str_replace("-->", "###COMMENT_CLOSE###", $str);
+		$replace = array(
+			"<!--" => "###COMMENT_OPEN###",
+			"-->" => "###COMMENT_CLOSE###",
+		);
+		$str = str_replace(array_keys($replace), $replace, $str);
 		$str = strip_tags($str, $allowable_tags);
-		$str = str_replace("###COMMENT_OPEN###", "<!--", $str);
-		$str = str_replace("###COMMENT_CLOSE###", "-->", $str);
+		$str = str_replace($replace, array_keys($replace), $str);
 		return $str;
 	}
 }
@@ -519,10 +517,12 @@ if (!function_exists('strip_tags_attr')) {
 		$void_tags = array(
 			'area',
 			'base',
+			'basefont',
 			'br',
 			'col',
 			'command',
 			'embed',
+			'frame',
 			'hr',
 			'img',
 			'input',
@@ -589,16 +589,17 @@ if (!function_exists('strip_tags_attr')) {
 		foreach($domElemsToRemove as $domElement) {
 			$domElement->parentNode->removeChild($domElement);
 		}
-		#$str = trim( strip_tags( html_entity_decode( $dom->saveHTML() ), $allowable_tags ) );
-		$str = trim( strip_tags( $dom->saveHTML(), $allowable_tags ) ); // conflicts with <3
+		#$str = trim( strip_tags( html_entity_decode( $dom->saveHTML() ), $allowable_tags ) ); // conflicts with <3
+		$str = trim( strip_tags( $dom->saveHTML(), $allowable_tags ) );
 		if (!empty($domElemsToRemove) && function_exists('trim_excess_space')) {
 			$str = trim_excess_space($str);
 		}
 		// wp adds single space before closer, so we should match it
-		preg_match_all("/(<(".implode("|", $void_tags).") [^>]+)>/is", $str, $matches);
-		if (isset($matches[0][0])) {
-			foreach ($matches[0] as $key => $value) {
-				$str = str_replace($value, rtrim($matches[1][$key], '/ ').' />', $str);
+		if (preg_match_all("/(<(".implode("|", $void_tags).") [^>]+)>/is", $str, $matches)) {
+			if (!empty($matches[0])) {
+				foreach ($matches[0] as $key => $value) {
+					$str = str_replace($value, rtrim($matches[1][$key], '/ ').' />', $str);
+				}
 			}
 		}
 		return $str;
@@ -890,24 +891,26 @@ if (!function_exists('get_page_thumbnail_id')) {
 				$gallery = true;
 			}
 			if ($single) {
-				preg_match_all("/<img.*?src=\"(.*?)\"/is", $content, $matches);
-				if ($matches[1][0]) {
-					$guid = preg_replace("/\-[0-9]+x[0-9]+(\.[a-z0-9]+)$/is", "$1", $matches[1][0]);
-					global $wpdb;
-				    $query = "SELECT ID FROM $wpdb->posts WHERE guid = '".$guid."' AND post_type = 'attachment'";
-					$sql = $wpdb->get_col($query);
-					if (!empty($sql)) {
-						$image_id = (int)$sql[0];
-					}
-					else {
-						$image_id = (string)$guid;
+				if (preg_match_all("/<img.*?src=\"(.*?)\"/is", $content, $matches)) {
+					if (!empty($matches[1])) {
+						$guid = preg_replace("/\-[0-9]+x[0-9]+(\.[a-z0-9]+)$/is", "$1", $matches[1][0]);
+						global $wpdb;
+					    $query = "SELECT ID FROM $wpdb->posts WHERE guid = '".$guid."' AND post_type = 'attachment'";
+						$sql = $wpdb->get_col($query);
+						if (!empty($sql)) {
+							$image_id = (int)$sql[0];
+						}
+						else {
+							$image_id = (string)$guid;
+						}
 					}
 				}
 			}
 			elseif ($gallery) {
-				preg_match_all("/\[gallery [^\]]*?ids=\"([0-9]+)/is", $content, $matches);
-				if ($matches[1][0]) {
-					$image_id = (int)$matches[1][0];
+				if (preg_match_all("/\[gallery [^\]]*?ids=\"([0-9]+)/is", $content, $matches)) {
+					if (!empty($matches[1])) {
+						$image_id = (int)$matches[1][0];
+					}
 				}
 			}
 			if (!empty($image_id)) {
