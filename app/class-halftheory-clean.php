@@ -136,6 +136,13 @@ class Halftheory_Clean {
 			$this->minify = new Halftheory_Helper_Minify();
 		}
 	}
+
+	public static function has_helper_plugin() {
+		if (!class_exists('Halftheory_Helper_Plugin')) {
+			@include_once(dirname(__FILE__).'/helpers/class-halftheory-helper-plugin.php');
+		}
+		return class_exists('Halftheory_Helper_Plugin');
+	}
 	
 	/* install */
 
