@@ -166,9 +166,9 @@ class Halftheory_Helper_Infinite_Scroll {
 				$data['value'] = $obj->term_id;
 			}
 		}
+		global $wp_query;
 		// get current wp_query conditions
 		if (Halftheory_Clean::has_helper_plugin()) {
-			global $wp_query;
 			$conditions = array();
 			foreach (Halftheory_Helper_Plugin::get_template_tags() as $key => $value) {
 				if (isset($wp_query->$key)) {
@@ -180,7 +180,6 @@ class Halftheory_Helper_Infinite_Scroll {
 			}
 		}
 		// compile all the js data
-		global $wp_query;
 		$js_data = array(
 			'ajaxurl' => esc_url(admin_url('admin-ajax.php')),
 			'data' => $data,
@@ -188,17 +187,20 @@ class Halftheory_Helper_Infinite_Scroll {
 			'container' => $this->container,
 			'pagination_selector' => $this->pagination_selector,
 		);
+		global $paged;
+		if (!empty($paged)) {
+			$js_data['paged'] = $paged;
+		}
+		/*
 		if (wp_is_mobile()) {
 			$js_data['wp_is_mobile'] = 1;
 		}
+		*/
 		wp_localize_script($handle, $handle, $js_data);
 	}
 
 	private function print_scripts() {
-		if (is_singular()) {
-			return false;
-		}
-		elseif (is_embed()) {
+		if (is_embed()) {
 			return false;
 		}
 		elseif (is_404()) {
@@ -207,6 +209,9 @@ class Halftheory_Helper_Infinite_Scroll {
 		elseif (is_privacy_policy()) {
 			return false;
 		}		
+		elseif (is_singular()) {
+			return false;
+		}
 		if (function_exists('is_login_page')) {
 			if (is_login_page()) {
 				return false;
@@ -216,6 +221,10 @@ class Halftheory_Helper_Infinite_Scroll {
 			if (is_signup_page()) {
 				return false;
 			}
+		}
+		global $wp_query, $paged;
+		if ($paged >= $wp_query->max_num_pages) {
+			return false;
 		}
 		return true;
 	}
