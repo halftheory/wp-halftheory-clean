@@ -13,7 +13,7 @@ final class Halftheory_Clean_Child_Theme extends Halftheory_Clean {
 	public static $plugins = array();
 
 	public function __construct($load_theme = false) {
-		parent::__construct();
+		parent::__construct($load_theme);
 		if ($load_theme) {
 			$this->setup_admin();
 		}

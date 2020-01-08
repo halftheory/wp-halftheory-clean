@@ -891,9 +891,9 @@ if (!function_exists('get_page_thumbnail_id')) {
 				$gallery = true;
 			}
 			if ($single) {
-				if (preg_match_all("/<img.*?src=\"(.*?)\"/is", $content, $matches)) {
+				if (preg_match_all("/<img .*?src=\"([^\"]+)\"/is", $content, $matches)) {
 					if (!empty($matches[1])) {
-						$guid = preg_replace("/\-[0-9]+x[0-9]+(\.[a-z0-9]+)$/is", "$1", $matches[1][0]);
+						$guid = preg_replace("/\-[0-9]+x[0-9]+(\.[\w]+)$/s", "$1", $matches[1][0]);
 						global $wpdb;
 					    $query = "SELECT ID FROM $wpdb->posts WHERE guid = '".$guid."' AND post_type = 'attachment'";
 						$sql = $wpdb->get_col($query);
@@ -901,7 +901,10 @@ if (!function_exists('get_page_thumbnail_id')) {
 							$image_id = (int)$sql[0];
 						}
 						else {
-							$image_id = (string)$guid;
+							$guid = (string)$guid;
+							if (parse_url(home_url(), PHP_URL_HOST) == parse_url($guid, PHP_URL_HOST)) {
+								$image_id = $guid;
+							}
 						}
 					}
 				}
@@ -1080,7 +1083,6 @@ if (!function_exists('get_fresh_file_or_transient_contents')) {
 		}
 		// 2. get new		
 		if ($refresh || $force_refresh) {
-			echo 'refresh ';
 			// callback function
 			if (is_callable($remotefile_or_callback)) {
 				$str_new = $remotefile_or_callback();
