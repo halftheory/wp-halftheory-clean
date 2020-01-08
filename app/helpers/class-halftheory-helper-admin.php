@@ -463,7 +463,7 @@ class Halftheory_Helper_Admin {
 				);
 		        // only update the page if something has changed
 				if ($new['menu_order'] !== $old['menu_order'] || $new['post_parent'] !== $old['post_parent']) {
-					wp_update_post($new);
+					wp_update_post(wp_slash($new));
 				}
 				if (!empty($value['children'])) {
 					$update_posts($value['children'], $value['ID']);

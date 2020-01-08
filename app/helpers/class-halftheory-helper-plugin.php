@@ -14,6 +14,9 @@ class Halftheory_Helper_Plugin {
 	public static $plugin_basename;
 	public static $prefix;
 	public $options = array();
+	protected $menu_page_tabs = array();
+	protected $menu_page_tab_active = '';
+	public static $plugin_version = null;
 
 	/* setup */
 
@@ -41,6 +44,18 @@ class Halftheory_Helper_Plugin {
 			static::$prefix = preg_replace("/[^a-z0-9]/", "", static::$prefix);
 		}
 		$this->options = array();
+		// only on our menu_page
+		if ($this->is_menu_page()) {
+			$this->menu_page_tab_active = (isset($_GET['tab']) ? $_GET['tab'] : '');
+			/* // child class set in init
+			$this->menu_page_tabs = array(
+				'' => array(
+					'name' => __('Settings'),
+					'callback' => 'menu_page',
+				),
+			);
+			*/
+		}
 	}
 
 	protected function setup_actions() {
@@ -117,17 +132,55 @@ class Halftheory_Helper_Plugin {
 	}
 
 	public function menu_page() {
+ 		$plugin = new static(static::$plugin_basename, static::$prefix, false);
+
+		// redirect to tab functions
+		if ($plugin->load_menu_page_tab()) {
+			return;
+		}
+
  		global $title;
 		?>
 		<div class="wrap">
-			<h2><?php echo $title; ?></h2>
-		<?php
- 		$plugin = new static(static::$plugin_basename, static::$prefix, false);
+		<h2><?php echo $title; ?></h2>
 
-		if ($plugin->save_menu_page()) {
+		<?php
+		if ($plugin->save_menu_page(__FUNCTION__)) {
 			// save
 		}
  		?>
+
+		<?php $plugin->print_menu_page_tabs(); ?>
+
+	    <form id="<?php echo $plugin::$prefix; ?>-admin-form" name="<?php echo $plugin::$prefix; ?>-admin-form" method="post" action="<?php echo $_SERVER['REQUEST_URI']; ?>">
+		<?php
+		// Use nonce for verification
+		wp_nonce_field($plugin::$plugin_basename, $plugin->plugin_name.'::'.__FUNCTION__);
+		?>
+	    <div id="poststuff">
+
+        <?php submit_button(__('Update'), array('primary','large'), 'save'); ?>
+
+        </div><!-- poststuff -->
+    	</form>
+
+ 		</div><!-- wrap -->
+ 		<?php
+ 	}
+
+	public function menu_page_tab($plugin) {
+ 		global $title;
+		?>
+		<div class="wrap">
+		<h2><?php echo $title; ?></h2>
+
+		<?php
+		if ($plugin->save_menu_page(__FUNCTION__)) {
+			// save
+		}
+ 		?>
+
+		<?php $plugin->print_menu_page_tabs(); ?>
 
 	    <form id="<?php echo $plugin::$prefix; ?>-admin-form" name="<?php echo $plugin::$prefix; ?>-admin-form" method="post" action="<?php echo $_SERVER['REQUEST_URI']; ?>">
 		<?php
@@ -147,7 +200,41 @@ class Halftheory_Helper_Plugin {
 
 	/* functions */
 
-	public function save_menu_page() {
+	public static function get_plugin_version() {
+		if (!is_null(static::$plugin_version)) {
+			return static::$plugin_version;
+		}
+		$file = WP_PLUGIN_DIR.'/'.static::$plugin_basename;
+		if (!file_exists($file)) {
+			return null;
+		}
+		if (!function_exists('get_plugin_data')) {
+        	require_once(ABSPATH.'wp-admin/includes/plugin.php');
+    	}
+		$plugin_data = get_plugin_data($file);
+		if (!is_array($plugin_data)) {
+			return null;
+		}
+		if (isset($plugin_data['Version'])) {
+			static::$plugin_version = $plugin_data['Version'];
+			return static::$plugin_version;
+		}
+		return null;
+	}
+
+	public function is_menu_page() {
+		if (!$this->is_front_end()) {
+	    	global $current_screen;
+	    	if (is_object($current_screen)) {
+		    	if (strpos($current_screen->id, static::$prefix) !== false) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	public function save_menu_page($function_name = 'menu_page') {
 		if (!isset($_POST['save'])) {
 			return false;
 		}
@@ -155,13 +242,44 @@ class Halftheory_Helper_Plugin {
 			return false;
 		}
 		// verify this came from the our screen and with proper authorization
-		if (!isset($_POST[$this->plugin_name.'::menu_page'])) {
+		if (!isset($_POST[$this->plugin_name.'::'.$function_name])) {
 			return false;
 		}
-		if (!wp_verify_nonce($_POST[$this->plugin_name.'::menu_page'], static::$plugin_basename)) {
+		if (!wp_verify_nonce($_POST[$this->plugin_name.'::'.$function_name], static::$plugin_basename)) {
 			return false;
 		}
 		return true;
+	}
+
+	public function load_menu_page_tab() {
+		if (!empty($this->menu_page_tabs) && !empty($this->menu_page_tab_active)) {
+			if (isset($this->menu_page_tabs[$this->menu_page_tab_active])) {
+				if (isset($this->menu_page_tabs[$this->menu_page_tab_active]['callback'])) {
+					if (method_exists($this, $this->menu_page_tabs[$this->menu_page_tab_active]['callback'])) {
+						$callback = $this->menu_page_tabs[$this->menu_page_tab_active]['callback'];
+						$this->$callback($this);
+						return true;
+					}
+				}
+			}
+		}
+		return false;
+	}
+
+	public function print_menu_page_tabs() {
+		if (!empty($this->menu_page_tabs)) : ?>
+		<h2 class="nav-tab-wrapper"><?php
+			global $pagenow;
+			foreach ($this->menu_page_tabs as $key => $value) {
+				if (empty($key)) {
+					echo '<a class="nav-tab'.($this->menu_page_tab_active == $key ? ' nav-tab-active' : '').'" href="'.esc_url( admin_url($pagenow.'?page='.static::$prefix) ).'">'.$value['name'].'</a> ';
+				}
+				else {
+					echo '<a class="nav-tab'.($this->menu_page_tab_active == $key ? ' nav-tab-active' : '').'" href="'.esc_url( admin_url($pagenow.'?page='.static::$prefix.'&tab='.$key) ).'">'.$value['name'].'</a> ';
+				}
+			}
+		?></h2>
+		<?php endif;
 	}
 
 	public function is_plugin_network() {

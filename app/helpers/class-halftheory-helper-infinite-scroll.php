@@ -108,7 +108,7 @@ class Halftheory_Helper_Infinite_Scroll {
 			return;
 		}
 		$handle = self::$ajax_action;
-		wp_enqueue_script($handle, get_template_directory_uri().'/app/helpers/infinite-scroll/infinite-scroll.min.js', array('jquery'), null, true);
+		wp_enqueue_script($handle, get_template_directory_uri().'/app/helpers/infinite-scroll/infinite-scroll.min.js', array('jquery'), Halftheory_Clean::get_theme_version(get_template_directory().'/app/helpers/infinite-scroll/infinite-scroll.min.js'), true);
 		// build the data array
 		$data = array(
 			'action' => self::$ajax_action,
