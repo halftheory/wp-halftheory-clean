@@ -14,8 +14,9 @@ class Halftheory_Helper_Plugin {
 	public static $plugin_basename;
 	public static $prefix;
 	public $options = array();
-	protected $menu_page_tabs = array();
-	protected $menu_page_tab_active = '';
+	public $postmeta = array();
+	public $menu_page_tabs = array();
+	public $menu_page_tab_active = '';
 	public static $plugin_version = null;
 
 	/* setup */
@@ -222,11 +223,19 @@ class Halftheory_Helper_Plugin {
 		return null;
 	}
 
-	public function is_menu_page() {
+	public function is_menu_page($str = null) {
 		if (!$this->is_front_end()) {
+			if (empty($str)) {
+				$str = static::$prefix;
+			}
 	    	global $current_screen;
 	    	if (is_object($current_screen)) {
-		    	if (strpos($current_screen->id, static::$prefix) !== false) {
+		    	if (strpos($current_screen->id, $str) !== false) {
+					return true;
+				}
+			}
+			elseif (isset($_SERVER['QUERY_STRING'])) {
+		    	if (strpos($_SERVER['QUERY_STRING'], $str) !== false) {
 					return true;
 				}
 			}
@@ -234,11 +243,35 @@ class Halftheory_Helper_Plugin {
 		return false;
 	}
 
-	public function save_menu_page($function_name = 'menu_page') {
-		if (!isset($_POST['save'])) {
+	public function is_edit_screen($post_types = array()) {
+		if (!function_exists('get_current_screen')) {
 			return false;
 		}
-		if (empty($_POST['save'])) {
+		if (!is_object(get_current_screen())) {
+			return false;
+		}
+		if (strpos(get_current_screen()->id, 'edit-') === false) {
+			return false;
+		}
+		elseif (strpos(get_current_screen()->id, 'edit-') !== false && empty($post_types)) {
+			return true;
+		}
+		if (!empty($post_types)) {
+			$post_types = $this->make_array($post_types);
+			foreach ($post_types as $post_type) {
+				if (get_current_screen()->id == 'edit-'.$post_type) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	public function save_menu_page($function_name = 'menu_page', $post_key = 'save') {
+		if (!isset($_POST[$post_key])) {
+			return false;
+		}
+		if (empty($_POST[$post_key])) {
 			return false;
 		}
 		// verify this came from the our screen and with proper authorization
@@ -255,10 +288,24 @@ class Halftheory_Helper_Plugin {
 		if (!empty($this->menu_page_tabs) && !empty($this->menu_page_tab_active)) {
 			if (isset($this->menu_page_tabs[$this->menu_page_tab_active])) {
 				if (isset($this->menu_page_tabs[$this->menu_page_tab_active]['callback'])) {
-					if (method_exists($this, $this->menu_page_tabs[$this->menu_page_tab_active]['callback'])) {
-						$callback = $this->menu_page_tabs[$this->menu_page_tab_active]['callback'];
-						$this->$callback($this);
-						return true;
+					if (is_string($this->menu_page_tabs[$this->menu_page_tab_active]['callback'])) {
+						if (method_exists($this, $this->menu_page_tabs[$this->menu_page_tab_active]['callback'])) {
+							$callback = $this->menu_page_tabs[$this->menu_page_tab_active]['callback'];
+							$this->$callback($this);
+							return true;
+						}
+						elseif (function_exists($this->menu_page_tabs[$this->menu_page_tab_active]['callback'])) {
+							$callback = $this->menu_page_tabs[$this->menu_page_tab_active]['callback'];
+							$callback($this);
+							return true;
+						}
+					}
+					elseif (is_array($this->menu_page_tabs[$this->menu_page_tab_active]['callback'])) {
+						if (is_callable($this->menu_page_tabs[$this->menu_page_tab_active]['callback'])) {
+							$callback = $this->menu_page_tabs[$this->menu_page_tab_active]['callback'];
+							$callback($this);
+							return true;
+						}
 					}
 				}
 			}
@@ -508,6 +555,53 @@ class Halftheory_Helper_Plugin {
 		$name = substr($name, 0, 255);
 		return $name;
 	}
+	public function get_postmeta($post_id = 0, $name = '', $key = '', $default = array()) {
+		$post_id = (int)$post_id;
+		$name = $this->get_postmeta_name($name);
+		$db_fetch = false;
+		if (!isset($this->postmeta[$post_id])) {
+			$this->postmeta[$post_id] = array();
+			$db_fetch = true;
+		}
+		else {
+			if (!isset($this->postmeta[$post_id][$name])) {
+				$db_fetch = true;
+			}
+		}
+		if ($db_fetch) {
+			$this->postmeta[$post_id][$name] = get_post_meta($post_id, $name, true);
+		}
+		if (!$this->empty_notzero($key) && is_array($this->postmeta[$post_id][$name])) {
+			if (array_key_exists($key, $this->postmeta[$post_id][$name])) {
+				return $this->postmeta[$post_id][$name][$key];
+			}
+			return $default;
+		}
+		return $this->postmeta[$post_id][$name];
+	}
+	public function update_postmeta($post_id = 0, $name = '', $value) {
+		$post_id = (int)$post_id;
+		$name = $this->get_postmeta_name($name);
+		$bool = update_post_meta($post_id, $name, $value);
+		if ($bool !== false) {
+			if (!isset($this->postmeta[$post_id])) {
+				$this->postmeta[$post_id] = array();
+			}
+			$this->postmeta[$post_id][$name] = $value;
+		}
+		return $bool;
+	}
+	public function delete_postmeta($post_id = 0, $name = '') {
+		$post_id = (int)$post_id;
+		$name = $this->get_postmeta_name($name);
+		$bool = delete_post_meta($post_id, $name);
+		if ($bool !== false && isset($this->postmeta[$post_id])) {
+			if (isset($this->postmeta[$post_id][$name])) {
+				unset($this->postmeta[$post_id][$name]);
+			}
+		}
+		return $bool;
+	}
 	public function delete_postmeta_uninstall($name = '') {
 		$name = $this->get_postmeta_name($name);
 		global $wpdb;
@@ -634,6 +728,213 @@ class Halftheory_Helper_Plugin {
 			}
 		}
 		return $res;
+	}
+
+	public function the_content_conditions($str = '') {
+		if (function_exists(__FUNCTION__)) {
+			$func = __FUNCTION__;
+			return $func($str);
+		}
+		if (empty($str)) {
+			return false;
+		}
+		if (did_action('get_header') == 0) {
+			return false;
+		}
+		if (is_404()) {
+			return false;
+		}
+		if (function_exists('is_signup_page')) {
+			if (is_signup_page()) {
+				return false;
+			}
+		}
+		if (function_exists('is_signup_page')) {
+			if (is_login_page()) {
+				return false;
+			}
+		}
+		if (!is_main_query() && !wp_doing_ajax()) {
+			return false;
+		}
+		if (!in_the_loop() && current_filter() == 'the_content') {
+			if (!is_tax() && !is_tag() && !is_category()) { // allow term_description()
+				return false;
+			}
+		}
+		if (!is_singular()) {
+			if (!is_tax() && !is_tag() && !is_category()) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	public function link_terms($str = '', $links = array(), $args = array()) {
+		if (function_exists(__FUNCTION__)) {
+			$func = __FUNCTION__;
+			return $func($str, $links, $args);
+		}
+		if (empty($str)) {
+			return $str;
+		}
+		$text_tags = array(
+			'b',
+			'blockquote',
+			'br',
+			'del',
+			'div',
+			'em',
+			'i',
+			'p',
+			'strong',
+			'u',
+		);
+		$defaults = array(
+			'limit' => 1,
+			'count_existing_links' => true,
+			'in_html_tags' => $text_tags,
+			'exclude_current_uri' => true,
+			'minify' => true,
+		);
+		$args = wp_parse_args($args, $defaults);
+		$args['limit'] = (int)$args['limit'];
+		$args['in_html_tags'] = $this->make_array($args['in_html_tags']);
+		$current_uri = !empty($args['exclude_current_uri']) ? $this->get_current_uri() : '';
+		$count_key = "###COUNT###";
+		$wptext_functions = array(
+			'wptexturize',
+			'convert_smilies',
+			'convert_chars',
+		);
+		$sort_longest_first = function($a, $b) {
+    		return strlen($b) - strlen($a);
+		};
+
+		// get all term/link pairs
+		$links = apply_filters('link_terms_links_before', $links, $str, $args);
+		if (empty($links)) {
+			return $str;
+		}
+		foreach ($links as $k => $v) {
+			if ($v == $current_uri || esc_url($v) == $current_uri) {
+				unset($links[$k]);
+				continue;
+			}
+			// unlimited - single level array
+			if ($args['limit'] === -1) {
+				$links[$k] = '<a href="'.esc_url($v).'">'.esc_html($k).'</a>';
+				$k_wp = $k;
+				foreach ($wptext_functions as $func) {
+					$k_wp = $func($k_wp);
+					if (!isset($links[$k_wp])) {
+						$links[$k_wp] = '<a href="'.esc_url($v).'">'.esc_html($k_wp).'</a>';
+					}
+				}
+			}
+			else {
+				$links[$k] = array(
+					$count_key => 0,
+					$k => '<a href="'.esc_url($v).'">'.esc_html($k).'</a>',
+				);
+				$k_wp = $k;
+				foreach ($wptext_functions as $func) {
+					$k_wp = $func($k_wp);
+					if (!isset($links[$k][$k_wp])) {
+						$links[$k][$k_wp] = '<a href="'.esc_url($v).'">'.esc_html($k_wp).'</a>';
+					}
+				}
+				// longest key first
+				uasort($links[$k], $sort_longest_first);
+				// existing links
+				if (!empty($args['count_existing_links']) && strpos($str, esc_url($v)) !== false) {
+					if (preg_match_all("/<a [^>]*?href=\"".preg_quote(esc_url($v), '/')."\"/is", $str, $matches)) {
+						$links[$k][$count_key] = count($matches);
+					}
+				}
+			}
+		}
+		$links = apply_filters('link_terms_links_after', $links, $str, $args);
+		if (empty($links)) {
+			return $str;
+		}
+		if ($args['limit'] >= 1) {
+			// longest key first - not needed with strtr
+			$links_keys = array_keys($links);
+			usort($links_keys, $sort_longest_first);
+			$links_old = $links;
+			$links = array();
+			foreach ($links_keys as $key) {
+				$links[$key] = $links_old[$key];
+			}
+			unset($links_keys);
+			unset($links_old);
+		}
+
+		// find / replace
+		$textarr = wp_html_split($str);
+		$changed = false;
+		// Loop through delimiters (elements) only.
+		for ($i = 0, $c = count($textarr); $i < $c; $i += 2) {
+			// check the previous tag
+			if ($i > 0) {
+				if (strpos($textarr[$i-1], '<a ') === 0) { // skip link text
+					continue;
+				}
+				elseif (strpos($textarr[$i-1], '</a>') === 0) { // after a link is fine
+				}
+				elseif (!empty($args['in_html_tags'])) {
+					if (!preg_match("/^<(".implode("|",$args['in_html_tags']).")( |\/|>)/is", $textarr[$i-1])) {
+						continue;
+					}
+				}
+			}
+			// unlimited
+			if ($args['limit'] === -1) {
+				foreach ($links as $search => $replace) {
+					if (strpos($textarr[$i], $search) !== false) {
+						$textarr[$i] = strtr($textarr[$i], $links);
+						$changed = true;
+						// After one strtr() break out of the foreach loop and look at next element.
+						break;
+					}
+				}
+			}
+			else {
+				foreach ($links as $key => $pairs) {
+					foreach ($pairs as $k => $v) {
+						if ($k === $count_key) {
+							continue;
+						}
+						if (strpos($textarr[$i], $k) !== false) {
+							$limit = absint($args['limit'] - $links[$key][$count_key]);
+							$count = 1;
+							$line_new = preg_replace('/'.preg_quote($k,'/').'/', $v, $textarr[$i], $limit, $count);
+							// send changes back to the main array to avoid keywords inside urls
+							$textarr = array_merge( array_slice($textarr, 0, $i), wp_html_split($line_new), array_slice($textarr, $i+1));
+							$c = count($textarr);
+							$changed = true;
+							$links[$key][$count_key] += $count;
+							// this pair is done
+							if ($links[$key][$count_key] >= $args['limit']) {
+								unset($links[$key]);
+								break;
+							}
+						}
+					}
+				}
+			}
+		}
+		if ($changed) {
+			if (!empty($args['minify'])) {
+				$func = function($v){
+					return trim($v, "\t\r");
+				};
+				$textarr = array_map($func, $textarr);
+			}
+			$str = implode($textarr);
+		}
+		return $str;
 	}
 
 }

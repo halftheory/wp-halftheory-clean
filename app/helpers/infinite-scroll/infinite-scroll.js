@@ -4,6 +4,7 @@ if (typeof infinite_scroll === 'object') {
 
 	var update = true;
 	var container_bottom;
+	var loaderId = 'infinite-scroll-loader';
 
 	/* functions */
 
@@ -26,18 +27,37 @@ if (typeof infinite_scroll === 'object') {
 			url: infinite_scroll.ajaxurl,
 			data: $.param(data),
 			success: function(html) {
-				if ($("#"+infinite_scroll.container).length) {
-					if ($(infinite_scroll.pagination_selector).length) {
-						$(infinite_scroll.pagination_selector+":visible").hide('fast');
+				loaderCreate();
+				$("#"+loaderId).fadeIn('fast',function(){
+					if ($("#"+infinite_scroll.container).length) {
+						if ($(infinite_scroll.pagination_selector).length) {
+							$(infinite_scroll.pagination_selector+":visible").hide('fast');
+						}
+						$("#"+infinite_scroll.container).append(html).append(function() { container_bottom = containerBottom(); update = true; });
 					}
-					$("#"+infinite_scroll.container).append(html).append(function() { container_bottom = containerBottom(); update = true; });
-				}
-				else {
-					$('body').append(html).append(function() { container_bottom = containerBottom(); update = true; });
-				}
+					else {
+						$('body').append(html).append(function() { container_bottom = containerBottom(); update = true; });
+					}
+				}).fadeOut('normal');
 			}
 		});
 		return false;
+	}
+
+	function loaderCreate() {
+		if ($("#"+loaderId).length) {
+			return;
+		}
+		$('body').append('<div id="'+loaderId+'"><img alt="Loading..." src="'+infinite_scroll.loader+'" /></div>');
+		loaderRotate();
+	}
+
+	function loaderRotate() {
+		var angle = 0;
+		setInterval(function(){
+			angle+=3;
+			$("#"+loaderId+" img").rotate(angle);
+		},10);
 	}
 
 	//document.ready

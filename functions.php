@@ -13,7 +13,7 @@ else {
 if (!class_exists('Halftheory_Clean')) {
 	@include_once(dirname(__FILE__).'/app/class-halftheory-clean.php');
 }
-if (!is_child_theme()) {
+if (!is_child_theme() && !isset($GLOBALS['Halftheory_Clean'])) {
 	$GLOBALS['Halftheory_Clean'] = new Halftheory_Clean(true);
 }
 ?>

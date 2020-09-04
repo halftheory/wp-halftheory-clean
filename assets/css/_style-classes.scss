@@ -1,6 +1,3 @@
-@charset "UTF-8";
-@import '_style-master.scss';
-
 // elements
 
 %bold {
@@ -42,6 +39,12 @@ $smaller-size: 0.7;
 }
 %nobr,
 %nowrap {
+	white-space: nowrap;
+}
+%ellipsis,
+%single-line {
+	text-overflow: ellipsis;
+	overflow: hidden;
 	white-space: nowrap;
 }
 %float-left {
