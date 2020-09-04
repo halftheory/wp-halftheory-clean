@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html <?php language_attributes(); ?> class="no-js">
-<head itemscope itemtype="http://schema.org/Webpage">
+<head itemscope itemtype="<?php echo set_url_scheme('http://schema.org/WebPage'); ?>">
 <meta charset="<?php bloginfo('charset'); ?>">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -23,19 +23,19 @@
 					<h1 class="site-title"><a href="<?php echo esc_url( home_url('/') ); ?>" rel="home"><?php bloginfo('name'); ?></a></h1>
 				</div>
 				<div class="float-right">
-					<p class="site-description"><?php bloginfo('description', 'display'); ?></p>
+					<p class="site-description"><?php bloginfo('description'); ?></p>
 				</div>
 			</div>
 
-			<?php if (has_nav_menu('primary-menu')) : ?><nav id="navigation" class="clear" aria-label="Primary Menu">
+			<?php if (has_nav_menu('primary-menu')) : ?><nav id="navigation" role="navigation" class="clear" aria-label="<?php esc_attr_e('Primary Menu'); ?>">
 				<?php
-					wp_nav_menu( array(
-						'theme_location' 	=> 'primary-menu',
-						'menu_id' 			=> 'menu',
-						'menu_class' 		=> '',
-						'container' 		=> '',
-						'depth' 			=> 2,
-					 ) );
+				wp_nav_menu(array(
+					'theme_location' 	=> 'primary-menu',
+					'menu_id' 			=> 'menu',
+					'menu_class' 		=> '',
+					'container' 		=> '',
+					'depth' 			=> 2,
+				 ));
 				?>
 			</nav><?php endif; ?>
 

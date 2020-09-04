@@ -4,6 +4,7 @@
 // elements
 
 html {
+	font-size: $default-font-size;
 	@include vendor-prefix(text-size-adjust, 100%);
 	font-family: sans-serif;
 	box-sizing: border-box;
@@ -81,6 +82,9 @@ a:focus {
 }
 .nobr {
 	@extend %nobr;
+}
+.single-line {
+	@extend %single-line;
 }
 .float-left {
 	@extend %float-left;

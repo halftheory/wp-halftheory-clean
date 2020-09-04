@@ -1,4 +1,3 @@
-@charset "UTF-8";
 // http://sass-lang.com/documentation/Sass/Script/Functions.html#unitless-instance_method
 // http://sass-lang.com/guide
 
@@ -9,35 +8,64 @@ $default-line-height: 1.5rem;
 
 // mobile
 
-$desktop-width: 1024px;
+$desktop-width: 1168px;
 $tablet-width: 768px;
 $phone-width: 480px;
 
+@mixin desktop {
+	@media only screen and (min-width: #{$tablet-width + 1px}) {
+		@content;
+	}
+}
 @mixin tablet {
-	//@media screen and (min-width: #{$phone-width + 1px}) and (max-width: #{$tablet-width}) {
-	@media screen and (max-width: #{$tablet-width}) {
+	@media only screen and (max-width: #{$tablet-width}) {
 		@content;
 	}
 }
 @mixin phone {
-	@media screen and (max-width: #{$phone-width}) {
+	@media only screen and (max-width: #{$phone-width}) {
 		@content;
 	}
 }
-@mixin desktop {
-	@media screen and (min-width: #{$tablet-width}) {
-		@content;
+
+// embeds
+// see: wp-includes/class-wp-oembed.php
+
+@function iframes($attr: src, $values...) {
+	$selector: '';
+	$max: length($values);
+	@for $i from 1 through $max {
+		$value: nth($values, $i);
+		$selector: #{$selector + "iframe["+$attr+"*=\""+$value+"\"]"};
+	    @if $i < $max {
+			$selector: #{$selector+", "};
+	    }
 	}
+	@return $selector;
 }
+
+$iframe-video: iframes(src,"youtube.com/","vimeo.com/","dailymotion.com/","hulu.com/","collegehumor.com/","facebook.com/plugins/video","screencast.com/","wordpress.tv/","public-api.wordpress.com/");
+
+$iframe-audio: iframes(src,"soundcloud.com/","spotify.com/","mixcloud.com/");
 
 // functions
 
 @function strip-unit($num) {
-	//@if (unitless($num) == false) {
 	@if type-of($num) == 'number' and not unitless($num) {
 		$num: $num / ($num * 0 + 1);
 	}
 	@return $num;
+}
+
+@function make-time($value, $unit: 's') {
+	@if type-of($value) == 'number' and not index('s' 'ms', unit($value)) {
+		$value: #{strip-unit($value)}#{$unit};
+	}
+	@return $value;
+}
+
+@function list-random($list) {
+	@return nth($list, random(length($list)));
 }
 
 @mixin rem($property, $values...) {
@@ -124,11 +152,29 @@ $phone-width: 480px;
 	&:after {
 	  display: table;
 	  content: " ";
+	  table-layout: fixed;
 	}
 	&:after {
 	  clear: both;
 	}
 	@content;
+}
+
+@mixin hyphens($value: auto) {
+	@if $value == none {
+		-webkit-hyphens: none;
+		-moz-hyphens: none;
+		-ms-hyphens: none;
+		hyphens: none;
+	}
+	@else {
+		-webkit-hyphens: auto;
+		-moz-hyphens: auto;
+		-ms-hyphens: auto;
+		hyphens: auto;
+		word-break: break-word;
+		word-wrap: break-word;
+	}
 }
 
 // browser vendor prefixes
@@ -185,9 +231,8 @@ $phone-width: 480px;
 	}
 }
 
-@mixin transition($property: all, $duration: 0.5, $timing-function: ease) {
-	$duration: strip-unit($duration);
-	@include vendor-prefix(transition, #{$property} #{$duration}s #{$timing-function});
+@mixin transition($property: all, $duration: 0.5s, $timing-function: ease) {
+	@include vendor-prefix(transition, #{$property} #{make-time($duration)} #{$timing-function});
 	@content;
 }
 

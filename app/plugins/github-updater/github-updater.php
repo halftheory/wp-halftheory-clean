@@ -20,7 +20,7 @@ class Halftheory_Clean_Plugin_GitHub_Updater {
     public function ghu_refresh_transients() {
         // force plugins/themes to update using the RESTful endpoints
 
-        $func = function($url) {
+        $func_get_url = function($url) {
             $str = null;
             if (function_exists('curl_init')) {
                 $c = @curl_init();
@@ -64,7 +64,7 @@ class Halftheory_Clean_Plugin_GitHub_Updater {
         // plugins
         // Ensure get_plugins() function is available.
         if (!function_exists('get_plugins')) {
-            include_once ABSPATH.'/wp-admin/includes/plugin.php';
+            require_once(ABSPATH.'wp-admin/includes/plugin.php');
         }
         $plugins_all = get_plugins();
         $plugins_all = array_keys($plugins_all);
@@ -75,11 +75,11 @@ class Halftheory_Clean_Plugin_GitHub_Updater {
         $plugins_all = array_map($plugins_func, $plugins_all);
         if (!empty($plugins_all)) {
             foreach ($plugins_all as $plugin) {
-                if (strpos($plugin, $this->plugin_prefix) === false) {
+                if ($this->ghu_refresh_transients_plugin($theme) === false) {
                     continue;
                 }
                 $url = add_query_arg(array('plugin' => urlencode($plugin)), $api_url);
-                if ($str = $func($url)) {
+                if ($str = $func_get_url($url)) {
                     $res[] = $str;
                 }
             }
@@ -90,11 +90,11 @@ class Halftheory_Clean_Plugin_GitHub_Updater {
         $themes_all = array_keys($themes_all);
         if (!empty($themes_all)) {
             foreach ($themes_all as $theme) {
-                if (strpos($theme, $this->plugin_prefix) === false) {
+                if ($this->ghu_refresh_transients_theme($theme) === false) {
                     continue;
                 }
                 $url = add_query_arg(array('theme' => urlencode($theme)), $api_url);
-                if ($str = $func($url)) {
+                if ($str = $func_get_url($url)) {
                     $res[] = $str;
                 }
             }
@@ -104,6 +104,24 @@ class Halftheory_Clean_Plugin_GitHub_Updater {
             echo implode("<br />\n", $res);
             exit;
         }
+    }
+
+    /* functions */
+
+    public function ghu_refresh_transients_plugin($plugin) { // condition for updating or ignoring plugin
+        $res = true;
+        if (strpos($plugin, $this->plugin_prefix) === false) {
+            $res = false;
+        }
+        return apply_filters('halftheory_ghu_refresh_transients_plugin', $res, $plugin);
+    }
+
+    public function ghu_refresh_transients_theme($theme) { // condition for updating or ignoring theme
+        $res = true;
+        if (strpos($theme, $this->plugin_prefix) === false) {
+            $res = false;
+        }
+        return apply_filters('halftheory_ghu_refresh_transients_theme', $res, $theme);
     }
 
 }

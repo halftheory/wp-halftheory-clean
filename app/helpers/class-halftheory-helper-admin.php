@@ -141,10 +141,17 @@ class Halftheory_Helper_Admin {
 			return;
 		}
 
-		add_action('admin_menu', array($this, 'admin_menu'), (9553+10));
-		add_action('current_screen', array($this, 'current_screen'));
-		add_action('wp_update_nav_menu', array($this, 'wp_update_nav_menu'), 20, 2);
-		add_filter('heartbeat_settings', array($this, 'heartbeat_settings'));
+		add_action('admin_menu', array($this,'admin_menu'), (9553+10));
+		add_action('current_screen', array($this,'current_screen'));
+		add_action('wp_update_nav_menu', array($this,'wp_update_nav_menu'), 20, 2);
+		add_filter('heartbeat_settings', array($this,'heartbeat_settings'));
+    	// regenerate_images
+		if (class_exists('Halftheory_Clean')) {
+			if (apply_filters(Halftheory_Clean::$prefix.'_image_size_actions', true)) {
+	    		add_filter('media_row_actions', array($this,'media_row_actions'), 20, 3);
+	    		add_action('post_action_regenerate_images', array($this,'post_action_regenerate_images'));
+	    	}
+	    }
 		// disable screen options
 		if (!$this->screen_options_show_screen) {
 			add_filter('screen_options_show_screen', '__return_false', 100);
@@ -189,11 +196,17 @@ class Halftheory_Helper_Admin {
 	}
 
 	public function admin_menu() {
+		if (!isset($GLOBALS['menu'])) {
+			return;
+		}
 		if (!is_array($GLOBALS['menu'])) {
 			return;
 		}
 		$has_submenu = true;
-		if (!is_array($GLOBALS['submenu'])) {
+		if (!isset($GLOBALS['submenu'])) {
+			$has_submenu = false;
+		}
+		elseif (!is_array($GLOBALS['submenu'])) {
 			$has_submenu = false;
 		}
 		if (!empty($this->admin_menu_include)) {
@@ -478,8 +491,204 @@ class Halftheory_Helper_Admin {
 		return $settings;
 	}
 
+	public function media_row_actions($actions = array(), $post = 0, $detached = false) {
+		if (!wp_attachment_is_image($post)) {
+			return $actions;
+		}
+		$actions['regenerate_images'] = sprintf(
+			'<a href="%s" aria-label="%s">%s</a>',
+			wp_nonce_url("post.php?action=regenerate_images&amp;post=$post->ID", 'regenerate-images-post_'.$post->ID),
+			esc_attr( sprintf( __('Regenerate images for &#8220;%s&#8221;'), $post->post_title) ),
+			__('Regenerate Images')
+		);
+		return $actions;
+	}
+	public function post_action_regenerate_images($post_id = 0) {
+		check_admin_referer('regenerate-images-post_'.$post_id);
+		global $post_type, $post_type_object, $post;
+		if ($post_id) {
+			$post = get_post($post_id);
+		}
+		if (is_object($post)) {
+			$post_type = $post->post_type;
+			$post_type_object = get_post_type_object($post_type);
+		}
+		if (!$post) {
+			wp_die( __('The item you are trying to edit no longer exists.') );
+		}
+		if (!$post_type_object) {
+			wp_die( __('Invalid post type.') );
+		}
+		if (!current_user_can('edit_post', $post->ID)) {
+			wp_die( __('Sorry, you are not allowed to edit this item.') );
+		}
+		$args = array(
+			'return_if_size_already_deleted' => false,
+			'delete_unregistered_thumbnail_files' => true,
+		);
+		if (!$this->regenerate_images($post->ID, $args)) {
+			wp_die( __('Regenerate images failed.') );
+		}
+		wp_redirect( add_query_arg('posted', 1, admin_url('upload.php')) );
+		exit();
+	}
+
 	/* functions */
-	
+
+	public function wp_filesystem() {
+		global $wp_filesystem;
+		if (!$wp_filesystem || !is_object($wp_filesystem)) {
+			if (!function_exists('WP_Filesystem')) {
+				require_once(ABSPATH.'wp-admin/includes/file.php');
+			}
+			$fs = WP_Filesystem();
+			if ($fs === false) {
+				return false;
+			}
+			if (!$wp_filesystem || !is_object($wp_filesystem)) {
+				return false;
+			}
+		}
+		return $wp_filesystem;
+	}
+
+	public function regenerate_images($id, $args = array()) {
+		if (!wp_attachment_is_image($id)) {
+			return false;
+		}
+		if (function_exists('wp_get_original_image_path')) {
+			$fullsizepath = wp_get_original_image_path($id);
+		}
+		else {
+			$fullsizepath = get_attached_file($id);
+		}
+		if ($fullsizepath === false || !file_exists($fullsizepath)) {
+			return $fullsizepath;
+		}
+
+		$args = wp_parse_args($args, array(
+			'return_if_size_already_deleted' => 'medium_large',
+			'delete_unregistered_thumbnail_files' => true,
+		));
+
+		$old_metadata = wp_get_attachment_metadata($id);
+
+		if ($args['return_if_size_already_deleted'] && !empty($args['return_if_size_already_deleted'])) {
+			if (!isset($old_metadata['sizes'][$args['return_if_size_already_deleted']])) {
+				return $old_metadata;
+			}
+		}
+
+		$wp_filesystem = $this->wp_filesystem();
+		if (!$wp_filesystem) {
+			return false;
+		}
+
+		if (!function_exists('wp_generate_attachment_metadata')) {
+			require_once(ABSPATH.'wp-admin/includes/admin.php');
+		}
+		$new_metadata = wp_generate_attachment_metadata($id, $fullsizepath);
+
+		if ($args['delete_unregistered_thumbnail_files']) {
+			// Delete old sizes that are still in the metadata.
+			$intermediate_image_sizes = get_intermediate_image_sizes();
+			foreach ($old_metadata['sizes'] as $old_size => $old_size_data) {
+				if (in_array($old_size, $intermediate_image_sizes)) {
+					continue;
+				}
+				if ($wp_filesystem->delete(path_join(dirname($fullsizepath), $old_size_data['file']))) {
+					if (array_key_exists($old_size, $new_metadata['sizes'])) {
+						unset($new_metadata['sizes'][$old_size]);
+					}
+				}
+			}
+		}
+
+		wp_update_attachment_metadata($id, $new_metadata);
+		return $new_metadata;
+	}
+
+	public function regenerate_all_images($args = array()) {
+		$query_args = array(
+			'post_type' => 'attachment',
+			'post_status' => 'any',
+			'posts_per_page' => -1,
+			'no_found_rows' => true,
+			'nopaging' => true,
+			'ignore_sticky_posts' => true,
+			'orderby' => 'modified',
+			'suppress_filters' => false,
+		);
+		$posts = get_posts($query_args);
+		if (empty($posts) || is_wp_error($posts)) {
+			return false;
+		}
+		foreach ($posts as $post) {
+			$this->regenerate_images($post->ID, $args);
+		}
+		// will probably time out
+		return true;
+	}
+
+	public function attach_thumbnails_to_posts() {
+		/*
+		SELECT m.post_id AS postid, m.meta_value AS thumbnailid, p.post_parent AS postparent FROM wp_postmeta m
+		RIGHT JOIN wp_posts p ON m.meta_value = p.ID
+		WHERE m.meta_key = '_thumbnail_id'
+		AND p.post_parent = 0
+		AND (p.post_status = 'inherit' OR p.post_status = 'publish')
+		AND p.post_type = 'attachment'
+
+		SELECT m.post_id AS postid, m.meta_value AS thumbnailid, p.post_parent AS postparent FROM wp_postmeta m, wp_posts p
+		WHERE m.meta_key = '_thumbnail_id'
+		AND m.meta_value = p.ID
+		AND p.post_parent = 0
+		AND (p.post_status = 'inherit' OR p.post_status = 'publish')
+		AND p.post_type = 'attachment'
+
+		UPDATE wp_posts p, wp_postmeta m SET p.post_parent = m.post_id
+		WHERE m.meta_key = '_thumbnail_id'
+		AND m.meta_value = p.ID
+		AND p.post_parent = 0
+		AND (p.post_status = 'inherit' OR p.post_status = 'publish')
+		AND p.post_type = 'attachment'
+		*/
+
+		// only for published posts
+		$args = array(
+			'post_type' => 'any',
+			'post_status' => 'publish',
+			'posts_per_page' => -1,
+			'no_found_rows' => true,
+			'nopaging' => true,
+			'ignore_sticky_posts' => true,
+			'orderby' => 'modified',
+			'suppress_filters' => false,
+			'fields' => 'ids',
+			'meta_query' => array(
+				array(
+					'key' => '_thumbnail_id',
+					'compare' => 'EXISTS',
+				)
+			)
+		);
+		$posts = get_posts($args);
+		if (empty($posts) || is_wp_error($posts)) {
+			return false;
+		}
+		global $wpdb;
+		$sql = "UPDATE $wpdb->posts p, $wpdb->postmeta m
+			SET p.post_parent = m.post_id
+			WHERE m.meta_key = '_thumbnail_id'
+			AND m.meta_value = p.ID
+			AND m.post_id IN (".implode(",", $posts).")
+			AND p.post_parent = 0
+			AND (p.post_status = 'inherit' OR p.post_status = 'publish')
+			AND p.post_type = 'attachment'";
+		$wpdb->query($sql);
+		return true;
+	}
+
 }
 endif;
 ?>

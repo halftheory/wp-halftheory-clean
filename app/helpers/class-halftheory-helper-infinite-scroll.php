@@ -108,7 +108,9 @@ class Halftheory_Helper_Infinite_Scroll {
 			return;
 		}
 		$handle = self::$ajax_action;
-		wp_enqueue_script($handle, get_template_directory_uri().'/app/helpers/infinite-scroll/infinite-scroll.min.js', array('jquery'), Halftheory_Clean::get_theme_version(get_template_directory().'/app/helpers/infinite-scroll/infinite-scroll.min.js'), true);
+		wp_enqueue_style($handle, get_template_directory_uri().'/app/helpers/infinite-scroll/infinite-scroll.css', array(), Halftheory_Clean::get_theme_version(get_template_directory().'/app/helpers/infinite-scroll/infinite-scroll.css'), 'screen');
+		wp_enqueue_script('jqueryrotate', get_template_directory_uri().'/app/helpers/infinite-scroll/jQueryRotateCompressed.js', array('jquery'), '2.3', true);
+		wp_enqueue_script($handle, get_template_directory_uri().'/app/helpers/infinite-scroll/infinite-scroll.min.js', array('jquery','jqueryrotate'), Halftheory_Clean::get_theme_version(get_template_directory().'/app/helpers/infinite-scroll/infinite-scroll.min.js'), true);
 		// build the data array
 		$data = array(
 			'action' => self::$ajax_action,
@@ -186,6 +188,7 @@ class Halftheory_Helper_Infinite_Scroll {
 			'max' => $wp_query->max_num_pages,
 			'container' => $this->container,
 			'pagination_selector' => $this->pagination_selector,
+			'loader' => apply_filters('halftheory_helper_infinite_scroll_loader', get_template_directory_uri().'/app/helpers/infinite-scroll/ajax-loader.png'),
 		);
 		global $paged;
 		if (!empty($paged)) {

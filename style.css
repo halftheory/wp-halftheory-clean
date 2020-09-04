@@ -11,7 +11,7 @@ License URI: http://www.gnu.org/licenses/gpl-2.0.html
 Text Domain: wp-halftheory-clean
 */
 @import url(assets/css/normalize.css);
-html { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; -moz-text-size-adjust: 100%; -o-text-size-adjust: 100%; text-size-adjust: 100%; font-family: sans-serif; box-sizing: border-box; }
+html { font-size: 16px; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; -moz-text-size-adjust: 100%; -o-text-size-adjust: 100%; text-size-adjust: 100%; font-family: sans-serif; box-sizing: border-box; }
 
 *, *:before, *:after { box-sizing: inherit; }
 
@@ -39,6 +39,8 @@ small, .small { font-size: 12.8px; font-size: 0.8rem; }
 
 .nobr { white-space: nowrap; }
 
+.single-line { text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
+
 .float-left { float: left; }
 
 .float-right { float: right; }
@@ -51,6 +53,6 @@ small, .small { font-size: 12.8px; font-size: 0.8rem; }
 
 a:focus { outline: 0; }
 
-.clearfix:before, .clearfix:after { display: table; content: " "; }
+.clearfix:before, .clearfix:after { display: table; content: " "; table-layout: fixed; }
 
 .clearfix:after { clear: both; }
