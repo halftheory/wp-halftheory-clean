@@ -31,22 +31,27 @@ $phone-width: 480px;
 // embeds
 // see: wp-includes/class-wp-oembed.php
 
-@function iframes($attr: src, $values...) {
+@function iframes($values...) {
+	$attr: ('src','data-src');
 	$selector: '';
-	$max: length($values);
-	@for $i from 1 through $max {
+	@for $i from 1 through length($values) {
 		$value: nth($values, $i);
-		$selector: #{$selector + "iframe["+$attr+"*=\""+$value+"\"]"};
-	    @if $i < $max {
+		@for $j from 1 through length($attr) {
+			$selector: #{$selector + "iframe["+nth($attr, $j)+"*=\""+$value+"\"]"};
+		    @if $j < length($attr) {
+				$selector: #{$selector+", "};
+		    }
+		}
+	    @if $i < length($values) {
 			$selector: #{$selector+", "};
 	    }
 	}
 	@return $selector;
 }
 
-$iframe-video: iframes(src,"youtube.com/","vimeo.com/","dailymotion.com/","hulu.com/","collegehumor.com/","facebook.com/plugins/video","screencast.com/","wordpress.tv/","public-api.wordpress.com/");
+$iframe-video: iframes("youtube.com/","vimeo.com/","dailymotion.com/","hulu.com/","collegehumor.com/","facebook.com/plugins/video","screencast.com/","wordpress.tv/","public-api.wordpress.com/");
 
-$iframe-audio: iframes(src,"soundcloud.com/","spotify.com/","mixcloud.com/");
+$iframe-audio: iframes("soundcloud.com/","spotify.com/","mixcloud.com/");
 
 // functions
 
@@ -231,8 +236,16 @@ $iframe-audio: iframes(src,"soundcloud.com/","spotify.com/","mixcloud.com/");
 	}
 }
 
-@mixin transition($property: all, $duration: 0.5s, $timing-function: ease) {
-	@include vendor-prefix(transition, #{$property} #{make-time($duration)} #{$timing-function});
+@mixin transition($property: all, $duration: 0.5s, $timing-function: ease, $delay: 0s, $important: '') {
+	@if length($property) == 1 {
+		@include vendor-prefix(transition, #{$property} #{make-time($duration)} #{$timing-function} #{make-time($delay)} #{$important});
+	}
+	@else {
+		transition-property: join($property, (), comma) $important;
+		transition-duration: make-time($duration);
+		transition-timing-function: $timing-function;
+		transition-delay: make-time($delay);
+	}
 	@content;
 }
 
@@ -405,4 +418,79 @@ $iframe-audio: iframes(src,"soundcloud.com/","spotify.com/","mixcloud.com/");
 		-ms-flex-line-pack: $value;
 	}
 	align-content: $value;
+}
+
+// menu
+
+@mixin menu-ul-dropdown($selector-menu-item: '.menu-item', $selector-menu-item-has-children: '.menu-item-has-children', $selector-sub-menu: '.sub-menu') {
+	$menu_arrow_down: '\f140';
+	$menu_arrow_left: '\f141';
+	$menu_arrow_right: '\f139';
+	$menu_arrow_up: '\f142';
+
+	list-style: none;
+	padding: 0;
+	margin: 0;
+	> li#{$selector-menu-item} { // top level - all items
+		display: inline-block;
+		veritcal-align: middle;
+	}
+	> li#{$selector-menu-item-has-children} { // top level - parent items
+		> a:after {
+			content: $menu_arrow_down;
+			font-family: dashicons;
+			font-weight: normal;
+			display: inline-block;
+			vertical-align: top;
+			-webkit-font-smoothing: antialiased;
+			-moz-osx-font-smoothing: grayscale;
+			color: inherit;
+			position: relative;
+			background: transparent;
+			height: auto;
+			width: auto;
+			right: auto;
+			line-height: inherit;
+			transform: rotate(0);
+			@include transition(transform);
+		}
+		> ul#{$selector-sub-menu} {
+			list-style: none;
+			padding: 0;
+			margin: 0;
+			text-align: left;
+			position: absolute;
+			visibility: hidden;
+			opacity: 0;
+			@include transition(opacity);
+			max-width: 10em;
+			@include hyphens;
+			> li#{$selector-menu-item} {
+				> a {
+					display: block;					
+				}
+			}
+		}
+		@include hover(&) {
+			> a:after {
+				transform: rotate(180deg);
+			}
+			> ul.sub-menu {
+				visibility: visible;
+				opacity: 1;
+			}
+		}
+	}
+}
+
+@mixin menu-ul-current ($selector-menu-item: '.menu-item', $selector-current: ('.current-menu-parent', '.current-page-parent', '.current_page_parent', '.current_page_ancestor' '.current-menu-item' '.current-menu-ancestor' '.current-page-ancestor', '.current_page_item')) {
+	> li#{$selector-menu-item} {
+		$max: length($selector-current);
+		@for $i from 1 through $max {
+			$value: nth($selector-current, $i);
+			&#{$value} {
+				@content;
+			}
+		}
+	}
 }

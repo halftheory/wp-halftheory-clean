@@ -2,6 +2,8 @@
 // Exit if accessed directly.
 defined('ABSPATH') || exit;
 
+// TODO: switch to restful api - http://domain.com/wp-json/github-updater/v1/update/?key=
+
 $plugin = 'Halftheory_Clean_Plugin_GitHub_Updater';
 
 if (!class_exists('Halftheory_Clean_Plugin_GitHub_Updater')) :
@@ -75,7 +77,7 @@ class Halftheory_Clean_Plugin_GitHub_Updater {
         $plugins_all = array_map($plugins_func, $plugins_all);
         if (!empty($plugins_all)) {
             foreach ($plugins_all as $plugin) {
-                if ($this->ghu_refresh_transients_plugin($theme) === false) {
+                if ($this->ghu_refresh_transients_plugin($plugin) === false) {
                     continue;
                 }
                 $url = add_query_arg(array('plugin' => urlencode($plugin)), $api_url);
@@ -109,18 +111,12 @@ class Halftheory_Clean_Plugin_GitHub_Updater {
     /* functions */
 
     public function ghu_refresh_transients_plugin($plugin) { // condition for updating or ignoring plugin
-        $res = true;
-        if (strpos($plugin, $this->plugin_prefix) === false) {
-            $res = false;
-        }
+        $res = strpos($plugin, $this->plugin_prefix) === false ? false : true;
         return apply_filters('halftheory_ghu_refresh_transients_plugin', $res, $plugin);
     }
 
     public function ghu_refresh_transients_theme($theme) { // condition for updating or ignoring theme
-        $res = true;
-        if (strpos($theme, $this->plugin_prefix) === false) {
-            $res = false;
-        }
+        $res = strpos($theme, $this->plugin_prefix) === false ? false : true;
         return apply_filters('halftheory_ghu_refresh_transients_theme', $res, $theme);
     }
 
