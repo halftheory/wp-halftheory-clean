@@ -91,7 +91,7 @@ if (typeof infinite_scroll === 'object') {
 			if(this.resizeTO) clearTimeout(this.resizeTO);
 			this.resizeTO = setTimeout(function() {
 				$(this).trigger('scrollEnd');
-			}, 500);
+			}, 250);
 		}).bind('scrollEnd', function() {
 			if (count > infinite_scroll.max) {
 				return false;

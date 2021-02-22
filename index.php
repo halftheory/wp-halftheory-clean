@@ -29,11 +29,7 @@ defined('ABSPATH') || exit;
 		} // End the loop.
 
 		// Previous/next page navigation.
-		the_posts_pagination(array(
-			'prev_text'          => __('Previous'),
-			'next_text'          => __('Next'),
-			'before_page_number' => '<span class="meta-nav screen-reader-text">'.__('Page').'</span>',
-		));
+		the_posts_pagination(Halftheory_Clean::pagination_args());
 	}
 	// If no content
 	else {

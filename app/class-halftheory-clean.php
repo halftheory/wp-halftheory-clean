@@ -2,12 +2,15 @@
 // Exit if accessed directly.
 defined('ABSPATH') || exit;
 
+@include_once(dirname(__FILE__).'/functions-common.php');
+
 if (!class_exists('Halftheory_Clean')) :
 class Halftheory_Clean {
 
 	public static $prefix = 'halftheoryclean';
-	public static $plugins = array();
+	public static $plugins = null;
 	public $admin = null;
+	public static $helper_plugin = null;
 	public static $cache_blog = array();
 	public static $cache_posts = array();
 
@@ -20,6 +23,10 @@ class Halftheory_Clean {
 	}
 
 	protected function setup_globals() {
+		// only do this once
+		if (static::$prefix !== 'halftheoryclean' || isset($this->plugin_name)) {
+			return;
+		}
 		$this->plugin_name = get_called_class();
 		$this->plugin_title = ucwords(str_replace('_', ' ', $this->plugin_name));
 		static::$prefix = sanitize_key($this->plugin_name);
@@ -28,9 +35,10 @@ class Halftheory_Clean {
 
 	protected function setup_plugins() {
 		// only do this once
-		if (!empty(static::$plugins)) {
+		if (!is_null(static::$plugins)) {
 			return;
 		}
+		static::$plugins = array();
 		$active_plugins = self::get_active_plugins();
 		if (empty($active_plugins)) {
 			return;
@@ -66,6 +74,7 @@ class Halftheory_Clean {
 		add_action('init', array($this,'init'), 20);
 		add_action('widgets_init', array($this,'widgets_init_remove_recent_comments'), 20);
 		add_action('widgets_init', array($this,'widgets_init'), 20);
+		add_action('template_redirect', array($this,'template_redirect'), 20);
 		add_filter('wp_default_scripts', array($this,'wp_default_scripts_remove_jquery_migrate'));
 		add_action('wp_enqueue_scripts', array($this,'wp_enqueue_scripts'), 20);
 		add_action('wp_enqueue_scripts', array($this,'wp_enqueue_scripts_slicknav'), 20);
@@ -94,7 +103,7 @@ class Halftheory_Clean {
 		add_filter('get_wp_title_rss', array($this,'get_wp_title_rss'));
 		add_filter('the_author', array($this,'the_author'));
 		add_action('pre_ping', array($this,'no_self_ping'));
-		add_filter('the_content', array($this,'the_content'), 12); // after autoembeds (priority 7), after shortcodes (priority 11)
+		add_filter('the_content', array($this,'the_content'), 12); // after autoembeds (priority 7), after shortcodes (priority 11), before obfuscate_email (priority 15)
 		remove_filter('the_content', 'convert_smilies', 20);
 		remove_filter('get_the_excerpt', 'wp_trim_excerpt', 10);
 		add_filter('get_the_excerpt', array($this,'get_the_excerpt'));
@@ -117,6 +126,10 @@ class Halftheory_Clean {
 	/* helpers for child themes - not in parent __construct */
 
 	protected function setup_admin() {
+		// only do this once
+		if (!is_null($this->admin)) {
+			return;
+		}
 		if (is_user_logged_in()) {
 			if (!class_exists('Halftheory_Helper_Admin')) {
 				@include_once(dirname(__FILE__).'/helpers/class-halftheory-helper-admin.php');
@@ -128,6 +141,10 @@ class Halftheory_Clean {
 	}
 
 	protected function setup_helper_cdn() {
+		// only do this once
+		if (isset($this->cdn)) {
+			return;
+		}
 		if (!class_exists('Halftheory_Helper_CDN')) {
 			@include_once(dirname(__FILE__).'/helpers/class-halftheory-helper-cdn.php');
 		}
@@ -137,6 +154,10 @@ class Halftheory_Clean {
 	}
 
 	protected function setup_helper_infinite_scroll() {
+		// only do this once
+		if (isset($this->infinite_scroll)) {
+			return;
+		}
 		if (!class_exists('Halftheory_Helper_Infinite_Scroll')) {
 			@include_once(dirname(__FILE__).'/helpers/class-halftheory-helper-infinite-scroll.php');
 		}
@@ -146,6 +167,10 @@ class Halftheory_Clean {
 	}
 
 	protected function setup_helper_minify() {
+		// only do this once
+		if (isset($this->minify)) {
+			return;
+		}
 		if (!class_exists('Halftheory_Helper_Minify')) {
 			@include_once(dirname(__FILE__).'/helpers/class-halftheory-helper-minify.php');
 		}
@@ -154,11 +179,26 @@ class Halftheory_Clean {
 		}
 	}
 
-	public static function has_helper_plugin() {
+	protected function setup_helper_plugin() {
+		// only do this once
+		if (!is_null(static::$helper_plugin)) {
+			return;
+		}
 		if (!class_exists('Halftheory_Helper_Plugin')) {
 			@include_once(dirname(__FILE__).'/helpers/class-halftheory-helper-plugin.php');
 		}
-		return class_exists('Halftheory_Helper_Plugin');
+		if (class_exists('Halftheory_Helper_Plugin')) {
+			static::$helper_plugin = new Halftheory_Helper_Plugin(basename(__FILE__), static::$prefix, false);
+		}
+	}
+
+	public static function get_helper_plugin() {
+		if (is_object(static::$helper_plugin)) {
+			if (is_a(static::$helper_plugin, 'Halftheory_Helper_Plugin')) {
+				return static::$helper_plugin;
+			}
+		}
+		return false;
 	}
 	
 	/* install */
@@ -167,6 +207,8 @@ class Halftheory_Clean {
 		$defaults = array(
 			// General
 			'users_can_register' => 0,
+			'gmt_offset' => 1,
+			'timezone_string' => '',
 			'date_format' => 'j F Y',
 			'time_format' => 'g:i A',
 			// Discussion
@@ -190,7 +232,6 @@ class Halftheory_Clean {
 			'medium_large_size_h' => 1000,
 			'large_size_w' => 2000,
 			'large_size_h' => 2000,
-			'uploads_use_yearmonth_folders' => '',
 			// Permalinks
 			'permalink_structure' => '/%category%/%postname%/',
 		);
@@ -202,6 +243,10 @@ class Halftheory_Clean {
 
 	public static function deactivation($new_theme_name = false, $new_theme_class = false, $old_theme_class = false) {
 		flush_rewrite_rules();
+		if ($hp = self::get_helper_plugin()) {
+			$hp->delete_transient_uninstall(static::$prefix);
+			unset($hp);
+		}
 	}
 
 	/* actions */
@@ -315,6 +360,32 @@ class Halftheory_Clean {
 		));
 	}
 
+	public function template_redirect() {
+		if (!is_front_end()) {
+			return;
+		}
+		// search urls
+		if (is_search() && isset($_GET['s'])) {
+			$url = !empty($_GET['s']) ? home_url("/search/").str_replace('%2F', '/', rawurlencode(get_query_var('s'))) : home_url();
+			if (wp_redirect_extended($url)) {
+				exit;
+			}
+		}
+		// redirect attachment posts to the item
+		if (is_singular() && is_attachment() && !in_the_loop() && !is_user_logged_in()) {
+			$url = false;
+			if ($image = self::get_image_context(get_the_ID(), 'url', 'large')) {
+				$url = $image;
+			}
+			else {
+				$url = wp_get_attachment_url(get_the_ID());
+			}
+			if (wp_redirect_extended($url)) {
+				exit;
+			}
+		}
+	}
+
 	public function wp_default_scripts_remove_jquery_migrate(&$scripts) {
 		if (!is_front_end()) {
 			return;
@@ -334,6 +405,7 @@ class Halftheory_Clean {
 	public function wp_enqueue_scripts_slicknav() {
 		// slicknav
 		if (has_nav_menu('primary-menu')) {
+	        wp_enqueue_style('dashicons');
 			// header
 			wp_enqueue_style('slicknav', get_template_directory_uri().'/assets/js/slicknav/slicknav.min.css', array(), '1.0.7', 'screen');
 			wp_enqueue_style('slicknav-init', get_template_directory_uri().'/assets/js/slicknav/slicknav-init.css', array('slicknav'), self::get_theme_version(get_template_directory().'/assets/js/slicknav/slicknav-init.css'), 'screen');
@@ -551,6 +623,10 @@ class Halftheory_Clean {
 		$ancestors = $this->get_ancestors();
 		if (!empty($ancestors)) {
 			$ancestors = array_unique( array_merge($ancestors, (array)$title) );
+			if (is_paged()) {
+				global $paged;
+				$ancestors[] = __('Page').' '.$paged;
+			}
 			if ($seplocation == 'right') {
 				$ancestors = array_reverse($ancestors);
 			}
@@ -617,20 +693,20 @@ class Halftheory_Clean {
 		if (!the_excerpt_conditions($str)) {
 			return $str;
 		}
-		$str = set_url_scheme_blob($str);
-		$str = make_clickable($str);
 		$args = array(
 			'allowable_tags' => array('a','b','del','em','i','strong','u'),
 			'plaintext' => false,
 			'single_line' => true,
 			'trim_urls' => true,
-			'strip_shortcodes' => false,
+			'strip_shortcodes' => true,
 			'strip_emails' => true,
 			'strip_urls' => false,
 			'add_dots' => true,
 			'add_stop' => true,
 		);
 		$str = get_excerpt($str, 500, $args);
+		$str = set_url_scheme_blob($str);
+		$str = make_clickable($str);
 		return $str;
 	}
 
@@ -788,6 +864,174 @@ class Halftheory_Clean {
 		return $res;
 	}
 
+	public static function get_oembed_thumbnail_context($post_id = 0, $context = 'url', $attr = '') {
+		$res = false;
+		if (empty($post_id)) {
+			return $res;
+		}
+		if (!in_array($context, array('src','img','link','url'))) {
+			return $res;
+		}
+		$urls = get_urls( get_post_field('post_content', $post_id, 'raw') );
+		if (empty($urls)) {
+			return $res;
+		}
+		$thumbnail_obj = false;
+		foreach ($urls as $url) {
+			if ($arr = self::get_oembed_thumbnail_urls($url)) {
+				$thumbnail_obj = current($arr);
+				break;
+			}
+		}
+		if (!$thumbnail_obj) {
+			return $res;
+		}
+		$thumbnail_attr = array(
+			'src' => set_url_scheme($thumbnail_obj->thumbnail_url),
+			'alt' => '',
+		);
+		if (isset($thumbnail_obj->thumbnail_width)) {
+			if (!empty($thumbnail_obj->thumbnail_width)) {
+				$thumbnail_attr['width'] = absint($thumbnail_obj->thumbnail_width);
+			}
+		}
+		if (isset($thumbnail_obj->thumbnail_height)) {
+			if (!empty($thumbnail_obj->thumbnail_height)) {
+				$thumbnail_attr['height'] = absint($thumbnail_obj->thumbnail_height);
+			}
+		}
+		if (is_array($attr)) {
+			$thumbnail_attr = array_merge($thumbnail_attr, $attr);
+		}
+		switch ($context) {
+			case 'src':
+				$res = array(0=>$thumbnail_attr['src']);
+				if (isset($thumbnail_attr['width'])) {
+					$res[1] = $res['width'] = $thumbnail_attr['width'];
+				}
+				if (isset($thumbnail_attr['width'])) {
+					$res[2] = $res['height'] = $thumbnail_attr['height'];
+				}
+				break;
+			case 'img':
+				$res = '<img ';
+				foreach ($thumbnail_attr as $key => $value) {
+					$res .= $key.'="'.esc_attr($value).'" ';
+				}
+				$res .= '/>';
+				break;
+			case 'link':
+				$res = '<a href="'.esc_url(set_url_scheme($url)).'"><img ';
+				foreach ($thumbnail_attr as $key => $value) {
+					$res .= $key.'="'.esc_attr($value).'" ';
+				}
+				$res .= '/></a>';
+				break;
+			case 'url':
+			default:
+				$res = $thumbnail_attr['src'];
+				break;
+		}
+		return $res;
+	}
+
+	public static function get_oembed_thumbnail_urls($urls = array()) {
+		if (empty($urls)) {
+			return false;
+		}
+		$urls = make_array($urls);
+		$urls = array_unique($urls);
+
+		// get cache or transient - lifetime = 1 year
+		$transient_name = static::$prefix.'_oembed_thumbnail_urls';
+		$transient_urls = array();
+		if (isset(static::$cache_blog[__FUNCTION__])) {
+			$transient_urls = static::$cache_blog[__FUNCTION__];
+		}
+		elseif ($hp = self::get_helper_plugin()) {
+			$switched = switch_to_native_blog();
+			if ($arr = $hp->get_transient($transient_name)) {
+				$transient_urls = $arr;
+			}
+			switch_from_native_blog($switched);
+			unset($hp);
+		}
+		$transient_urls_new = $transient_urls; // track changes
+
+		// return original urls as array keys
+		// but store urls in a normalized way
+		$oembed = _wp_oembed_get_object();
+		$res_db = array();
+		foreach ($urls as $url) {
+			$key_db = untrailingslashit(set_url_scheme($url, 'http'));
+			if (isset($res_db[$key_db])) {
+				continue;
+			}
+			// transient
+			if (array_key_exists($key_db, $transient_urls)) {
+				if (isset($transient_urls[$key_db]->thumbnail_url)) {
+					if (url_exists($transient_urls[$key_db]->thumbnail_url)) {
+						$res_db[$key_db] = $transient_urls[$key_db];
+						continue;
+					}
+				}
+				unset($transient_urls_new[$key_db]);
+			}
+			// oembed
+			if ($obj = $oembed->get_data($key_db, array('discover'=>false))) {
+				if (isset($obj->thumbnail_url)) {
+					if (!empty($obj->thumbnail_url) && strpos($obj->thumbnail_url, 'placeholder') === false) {
+						$res_db[$key_db] = $transient_urls_new[$key_db] = $obj;
+						continue;
+					}
+				}
+			}
+		}
+		// changed
+		if ($transient_urls_new !== $transient_urls) {
+			// reduce the array
+			foreach ($transient_urls_new as $key_db => $obj) {
+				foreach ($obj as $key => $value) {
+					if (strpos($key, 'thumbnail') !== false) {
+						continue;
+					}
+					if (!is_numeric($value) && (strlen($value) > 250 || strlen($value) == 0)) {
+						unset($obj->$key);
+					}
+				}
+				$transient_urls_new[$key_db] = $obj;
+			}
+			static::$cache_blog[__FUNCTION__] = $transient_urls_new;
+			// save transient
+			if ($hp = self::get_helper_plugin()) {
+				$switched = switch_to_native_blog();
+				if (empty($transient_urls_new)) {
+					$hp->delete_transient($transient_name);				
+				}
+				else {
+					$hp->set_transient($transient_name, $transient_urls_new, '1 year');
+				}
+				switch_from_native_blog($switched);
+				unset($hp);
+			}
+		}
+
+		if (empty($res_db)) {
+			return false;
+		}
+		$res = array();
+		foreach ($urls as $url) {
+			$key_db = untrailingslashit(set_url_scheme($url, 'http'));
+			if (isset($res_db[$key_db])) {
+				$res[$url] = $res_db[$key_db];
+			}
+		}
+		if (empty($res)) {
+			return false;
+		}
+		return $res;
+	}
+
 	/* functions - cache_blog */
 
 	public static function get_cache_key($keys = array(), $values = array()) {
@@ -812,6 +1056,9 @@ class Halftheory_Clean {
 				// some plugins like buddypress hide the real post_id in queried_object_id
 				global $wp_query;
 				$post_id = isset($wp_query->queried_object_id) ? (int)$wp_query->queried_object_id : 0;
+				if (empty($post_id) && isset($wp_query->post)) {
+					$post_id = $wp_query->post->ID;
+				}
 			}
 		}
 		elseif (is_posts_page()) {
@@ -895,116 +1142,148 @@ class Halftheory_Clean {
 		return $post_id;
 	}
 
+	public static function cache_posts_isset($post_id = null, $cache_key) {
+		$post_id = self::cache_posts_init($post_id);
+		if (is_array($cache_key)) {
+			$arr = static::$cache_posts[$post_id];
+			foreach ($cache_key as $value) {
+				if (array_key_exists($value, $arr)) {
+					$arr = $arr[$value];
+				}
+				else {
+					return false;
+				}
+			}
+			return true;
+		}
+		else {
+			return array_key_exists($cache_key, static::$cache_posts[$post_id]);
+		}
+	}
+
+	public static function cache_posts_set($post_id = null, $cache_key, $value = null) {
+		$post_id = self::cache_posts_init($post_id);
+		if (is_array($cache_key)) {
+			$json_str = '';
+			foreach ($cache_key as $v) {
+				$json_str .= '{"'.$v.'":';
+			}
+			$json_str = $json_str.'"'.false.'"'.str_repeat('}', count($cache_key));
+			$arr = json_decode($json_str, true);
+			$func = function(&$arr) use (&$func, $value) {
+				foreach ($arr as $k => &$v) {
+					if (is_array($v)){
+						$func($v);
+						continue;
+					}
+					$v = $value;
+				}
+			};
+			$func($arr);
+			static::$cache_posts[$post_id] = array_merge_recursive(static::$cache_posts[$post_id], $arr);
+		}
+		else {
+			static::$cache_posts[$post_id][$cache_key] = $value;
+		}
+		return $value;
+	}
+
+	public static function cache_posts_get($post_id = null, $cache_key, $default = false, $clear_key = false) {
+		$post_id = self::cache_posts_init($post_id);
+		$res = $default;
+		if (self::cache_posts_isset($post_id, $cache_key)) {
+			if (is_array($cache_key)) {
+				$arr = static::$cache_posts[$post_id];
+				$error = false;
+				foreach ($cache_key as $value) {
+					if (array_key_exists($value, $arr)) {
+						$arr = $arr[$value];
+					}
+					else {
+						$error = true;
+					}
+				}
+				// TODO: $clear_key
+				$res = (!$error) ? $arr : $default;
+			}
+			else {
+				$res = static::$cache_posts[$post_id][$cache_key];
+				if ($clear_key) {
+					unset(static::$cache_posts[$post_id][$cache_key]);
+				}
+			}
+		}
+		return $res;
+	}
+
 	public function get_title_ancestors($post_id = null) {
 		$post_id = self::cache_posts_init($post_id);
 
 		$title = get_bloginfo('name');
 		$ancestors = array(get_bloginfo('name'));
 
-		// posts
+        $post_types_builtin = get_post_types(array('public'=>true,'_builtin'=>true),'names');
+
+		// posts - use the post_id
 		if (!empty($post_id) && $post = get_post($post_id)) {
-			$title = get_the_title($post_id);
+			$title = current_filter() === 'the_title' ? $post->post_title : get_the_title($post_id);
 			// search ancestors - pages, maybe custom post types
 			$arr = get_ancestors($post_id, $post->post_type);
 			if (!empty($arr)) {
 				$arr = array_reverse($arr);
 				foreach ($arr as $value) {
-					$ancestors[] = get_the_title($value);
+					$ancestors[] = current_filter() === 'the_title' ? get_post_field('post_title',$value,'raw') : get_the_title($value);
 				}
 			}
-			// or taxonomies - post(category), maybe custom post types
 			else {
-				$taxonomy_objects = get_object_taxonomies($post->post_type, 'objects');
-				if (!empty($taxonomy_objects)) {
-					foreach ($taxonomy_objects as $taxonomy) {
-						if ($taxonomy->name == 'post_tag' || $taxonomy->name == 'post_format') {
-							continue;
-						}
-						$terms = wp_get_post_terms($post_id, $taxonomy->name);
-						if (!empty($terms) && !is_wp_error($terms)) {
-							foreach ($terms as $term) {
-								if ($term->name == 'Uncategorized') {
-									continue;
-								}
-								$ancestors[] = $term->name;
-								if (is_taxonomy_hierarchical($term->taxonomy)) {
-									$arr = get_ancestors($term->term_id, $term->taxonomy);
-									if (!empty($arr)) {
-										$arr = array_reverse($arr);
-										foreach ($arr as $value) {
-											$term_parent = get_term($value, $term->taxonomy);
-											if (!empty($term_parent) && !is_wp_error($term_parent)) {
-												$ancestors[] = $term_parent->name;
+				// maybe custom post types
+		        if (!in_array($post->post_type, $post_types_builtin) && $obj = get_post_type_object($post->post_type)) {
+		        	$ancestors[] = $obj->labels->name;
+		        }
+				// or taxonomies
+		    	else {
+					$taxonomy_objects = get_object_taxonomies($post->post_type, 'objects');
+					if (!empty($taxonomy_objects)) {
+						foreach ($taxonomy_objects as $taxonomy) {
+							if ($taxonomy->name == 'post_tag' || $taxonomy->name == 'post_format') {
+								continue;
+							}
+							$terms = wp_get_post_terms($post_id, $taxonomy->name);
+							if (!empty($terms) && !is_wp_error($terms)) {
+								foreach ($terms as $term) {
+									if ($term->name == 'Uncategorized') {
+										continue;
+									}
+									$ancestors[] = $term->name;
+									if (is_taxonomy_hierarchical($term->taxonomy)) {
+										$arr = get_ancestors($term->term_id, $term->taxonomy);
+										if (!empty($arr)) {
+											$arr = array_reverse($arr);
+											foreach ($arr as $value) {
+												$term_parent = get_term($value, $term->taxonomy);
+												if (!empty($term_parent) && !is_wp_error($term_parent)) {
+													$ancestors[] = $term_parent->name;
+												}
 											}
 										}
 									}
+									break;
 								}
 								break;
 							}
-							break;
 						}
 					}
 				}
 			}
 		}
-		// some pages don't need more ancestors
+		// no post_id
 		else {
+			// some pages don't need more ancestors
 			if (is_404()) {
 				$title = __('Page not found');
 			}
-			elseif (is_author()) {
-				$title = array(__('Author'), get_the_author());
-			}
-			elseif (is_category()) {
-				$title = single_cat_title('',false);
-				if (is_taxonomy_hierarchical('category')) {
-					$obj = get_queried_object();
-					if (!empty($obj)) {
-						$arr = get_ancestors($obj->term_id, 'category');
-						if (!empty($arr)) {
-							$arr = array_reverse($arr);
-							foreach ($arr as $value) {
-								$term = get_term($value, 'category');
-								if (!empty($term) && !is_wp_error($term)) {
-									$ancestors[] = $term->name;
-								}
-							}
-						}
-					}
-				}
-			}
-			elseif (is_date()) {
-				$date_format = get_option('date_format');
-				if (is_year()) { $date_format = 'Y'; }
-				elseif (is_month()) { $date_format = 'F Y'; }
-				$title = array(__('Date'), get_the_time($date_format));
-			}
-			elseif (is_post_type_archive()) {
-				$title = post_type_archive_title('',false);
-			}
 			elseif (is_search()) {
 				$title = array(__('Search Results'), '"'.get_search_query().'"');
-			}
-			elseif (is_tag()) {
-				$title = array(__('Tag'), single_tag_title('',false));
-			}
-			elseif (is_tax()) {
-				$obj = get_queried_object();
-				if (!empty($obj)) {
-					$title = $obj->name;
-					if (is_taxonomy_hierarchical($obj->taxonomy)) {
-						$arr = get_ancestors($obj->term_id, $obj->taxonomy);
-						if (!empty($arr)) {
-							$arr = array_reverse($arr);
-							foreach ($arr as $value) {
-								$term = get_term($value, $obj->taxonomy);
-								if (!empty($term) && !is_wp_error($term)) {
-									$ancestors[] = $term->name;
-								}
-							}
-						}
-					}
-				}
 			}
 			elseif (is_signup_page()) {
 				$title = __('Sign Up');
@@ -1012,7 +1291,7 @@ class Halftheory_Clean {
 			elseif (is_login_page()) {
 				$title = __('Login');
 			}
-			elseif (is_posts_page()) {
+			elseif (is_posts_page($post_id)) {
 				$default_category = get_option('default_category');
 				if (!empty($default_category)) {
 					$term = get_term($default_category, 'category');
@@ -1023,14 +1302,165 @@ class Halftheory_Clean {
 					}
 				}
 			}
+			// these could be a combination, use the main query to find out which is first
+			else {
+				$title_old = $title;
+				$title = array();
+				$done = array();
+				$obj = get_queried_object();
+				$obj_class = !empty($obj) ? get_class($obj) : false; // probably one of: WP_Post WP_Post_Type WP_Term WP_Taxonomy
+				// 1st level, maybe
+				switch ($obj_class) {
+					case 'WP_Post':
+					case 'WP_Post_Type':
+						if (is_post_type_archive()) {
+							$title[] = post_type_archive_title('',false);
+							$done[] = 'is_post_type_archive';
+						}
+						elseif ($post_type = get_query_var('post_type', false)) {
+							if (!in_array($post_type, $post_types_builtin) && $obj = get_post_type_object($post_type)) {
+								$title[] = $obj->labels->name;
+								$done[] = 'post_type';
+							}
+						}
+						break;
+					case 'WP_Term':
+					case 'WP_Taxonomy':
+						if (is_category()) {
+							$title[] = single_cat_title('',false);
+							$done[] = 'is_category';
+							if (is_taxonomy_hierarchical('category')) {
+								if (isset($obj->term_id)) {
+									$arr = get_ancestors($obj->term_id, 'category');
+									if (!empty($arr)) {
+										$arr = array_reverse($arr);
+										foreach ($arr as $value) {
+											$term = get_term($value, 'category');
+											if (!empty($term) && !is_wp_error($term)) {
+												$ancestors[] = $term->name;
+											}
+										}
+									}
+								}
+							}
+						}
+						elseif (is_tag()) {
+							$title[] = __('Tag');
+							$title[] = single_tag_title('',false);
+							$done[] = 'is_tag';
+						}
+						elseif (is_tax()) {
+							if (isset($obj->term_id)) {
+								$title[] = $obj->name;
+								$done[] = 'is_tax';
+								if ($tax = get_taxonomy($obj->taxonomy)) {
+									$ancestors[] = $tax->labels->name;
+								}
+								if (is_taxonomy_hierarchical($obj->taxonomy)) {
+									$arr = get_ancestors($obj->term_id, $obj->taxonomy);
+									if (!empty($arr)) {
+										$arr = array_reverse($arr);
+										foreach ($arr as $value) {
+											$term = get_term($value, $obj->taxonomy);
+											if (!empty($term) && !is_wp_error($term)) {
+												$ancestors[] = $term->name;
+											}
+										}
+									}
+								}
+							}
+						}
+						break;
+					default:
+						break;
+				}
+				// 1st/2nd level
+				if (is_author()) {
+					if (empty($done)) { $title[] = __('Author'); }
+					$title[] = get_the_author();
+					$done[] = 'is_author';
+				}
+				if (is_post_type_archive() && !in_array('is_post_type_archive', $done)) {
+					$title[] = post_type_archive_title('',false);
+					$done[] = 'is_post_type_archive';
+				}
+				if ($post_type = get_query_var('post_type', false) && !in_array('post_type', $done)) {
+					if (!in_array($post_type, $post_types_builtin) && $obj = get_post_type_object($post_type)) {
+						$title[] = $obj->labels->name;
+						$done[] = 'post_type';
+					}
+				}
+				if (is_category() && !in_array('is_category', $done)) {
+					$title[] = single_cat_title('',false);
+					if (empty($done)) {
+						if (is_taxonomy_hierarchical('category')) {
+							if (isset($obj->term_id)) {
+								$arr = get_ancestors($obj->term_id, 'category');
+								if (!empty($arr)) {
+									$arr = array_reverse($arr);
+									foreach ($arr as $value) {
+										$term = get_term($value, 'category');
+										if (!empty($term) && !is_wp_error($term)) {
+											$ancestors[] = $term->name;
+										}
+									}
+								}
+							}
+						}
+					}
+					$done[] = 'is_category';
+				}
+				if (is_tag() && !in_array('is_tag', $done)) {
+					if (empty($done)) { $title[] = __('Tag'); }
+					$title[] = single_tag_title('',false);
+					$done[] = 'is_tag';
+				}
+				if (is_tax() && !in_array('is_tax', $done)) {
+					if (isset($obj->term_id)) {
+						$title[] = $obj->name;
+						if (empty($done)) {
+							if ($tax = get_taxonomy($obj->taxonomy)) {
+								$ancestors[] = $tax->labels->name;
+							}
+							if (is_taxonomy_hierarchical($obj->taxonomy)) {
+								$arr = get_ancestors($obj->term_id, $obj->taxonomy);
+								if (!empty($arr)) {
+									$arr = array_reverse($arr);
+									foreach ($arr as $value) {
+										$term = get_term($value, $obj->taxonomy);
+										if (!empty($term) && !is_wp_error($term)) {
+											$ancestors[] = $term->name;
+										}
+									}
+								}
+							}
+						}
+						$done[] = 'is_tax';
+					}
+				}
+				if (is_date()) {
+					$date_format = get_option('date_format');
+					if (is_year()) { $date_format = 'Y'; }
+					elseif (is_month()) { $date_format = 'F Y'; }
+					if (empty($done)) { $title[] = __('Date'); }
+					$title[] = get_the_time($date_format);
+					$done[] = 'is_date';
+				}
+				// just in case
+				if (empty($title)) {
+					$title = $title_old;
+				}
+			}
 		}
-		if (is_home_page()) {
+
+		if (is_home_page($post_id)) {
 			$ancestors[] = get_bloginfo('description');
 		}
 
 		if (is_array($title)) {
 			$title = array_map('sanitize_text_field', $title);
 			$title = array_map('trim_excess_space', $title);
+			$title = array_filter($title);
 		}
 		else {
 			$title = sanitize_text_field($title);
@@ -1051,13 +1481,13 @@ class Halftheory_Clean {
 	public function get_title($post_id = null, $sep = ' - ') {
 		$post_id = self::cache_posts_init($post_id);
 		$res = false;
-		if (array_key_exists('title', static::$cache_posts[$post_id])) {
-			$res = static::$cache_posts[$post_id]['title'];
+		if (self::cache_posts_isset($post_id, 'title')) {
+			$res = self::cache_posts_get($post_id, 'title');
 		}
 		else {
 			list($title, $ancestors) = $this->get_title_ancestors($post_id);
-			$res = static::$cache_posts[$post_id]['title'] = !empty_notzero($title) ? $title : false;
-			static::$cache_posts[$post_id]['ancestors'] = !empty_notzero($ancestors) ? $ancestors : false;
+			$res = self::cache_posts_set($post_id, 'title', $title);
+			self::cache_posts_set($post_id, 'ancestors', $ancestors);
 		}
 		if (is_array($res)) {
 			$res = wptexturize(implode($sep, $res));
@@ -1068,37 +1498,35 @@ class Halftheory_Clean {
 	public function get_ancestors($post_id = null) {
 		$post_id = self::cache_posts_init($post_id);
 		$res = false;
-		if (array_key_exists('ancestors', static::$cache_posts[$post_id])) {
-			$res = static::$cache_posts[$post_id]['ancestors'];
+		if (self::cache_posts_isset($post_id, 'ancestors')) {
+			$res = self::cache_posts_get($post_id, 'ancestors');
 		}
 		else {
 			list($title, $ancestors) = $this->get_title_ancestors($post_id);
-			$res = static::$cache_posts[$post_id]['ancestors'] = !empty_notzero($ancestors) ? $ancestors : false;
-			static::$cache_posts[$post_id]['title'] = !empty_notzero($title) ? $title : false;
+			self::cache_posts_set($post_id, 'title', $title);
+			$res = self::cache_posts_set($post_id, 'ancestors', $ancestors);
 		}
 		return $res;
 	}
 
 	public static function get_thumbnail_context($post_id = null, $context = 'url', $size = 'medium', $attr = '', $options = array()) {
 		$post_id = self::cache_posts_init($post_id);
-		if (!isset(static::$cache_posts[$post_id]['thumbnail_extended'])) {
-			static::$cache_posts[$post_id]['thumbnail_extended'] = array();
-		}
 		$res = false;
 		$cache_key = self::get_cache_key('post_id,context,size,attr,options', array($post_id,$context,$size,$attr,$options));
-		if (array_key_exists($cache_key, static::$cache_posts[$post_id]['thumbnail_extended'])) {
-			$res = static::$cache_posts[$post_id]['thumbnail_extended'][$cache_key];
+		if (self::cache_posts_isset($post_id, array('thumbnail_extended',$cache_key))) {
+			$res = self::cache_posts_get($post_id, array('thumbnail_extended',$cache_key));
 		}
 		else {
 			$options_default = array(
 				'post_thumbnail' => true,
 				'gallery' => true,
 				'attached_media' => true,
+				'oembed_thumbnail_url'=>false,
 				'custom_logo' => false,
 				'search_logo' => false,
 			);
 			if (empty($post_id)) { // no post, no thumb
-				$options['post_thumbnail'] = $options['gallery'] = $options['attached_media'] = false;
+				$options['post_thumbnail'] = $options['gallery'] = $options['attached_media'] = $options['oembed_thumbnail_url'] = false;
 			}
 			$options = array_filter( array_merge($options_default, $options) );
 			$image_id = false;
@@ -1174,11 +1602,17 @@ class Halftheory_Clean {
 							}
 						}
 						break;
-					// 4. custom_logo
+					// 4. oembed_thumbnail_url
+					case 'oembed_thumbnail_url':
+						if ($image = self::get_oembed_thumbnail_context($post_id, $context, $attr)) {
+							$res = $image;
+						}
+						break;
+					// 5. custom_logo
 					case 'custom_logo':
 						$image_id = self::get_custom_logo('id', $size, $attr);
 						break;
-					// 5. logo from search
+					// 6. logo from search
 					case 'search_logo':
 						$search = get_posts(array(
 							'no_found_rows' => true,
@@ -1194,13 +1628,15 @@ class Halftheory_Clean {
 					default:
 						break;
 				}
-				if (!empty($image_id)) {
+				if (empty($res) && !empty($image_id)) {
 					$res = self::get_image_context($image_id, $context, $size, $attr);
+				}
+				if (!empty($res)) {
 					break;
 				}
 			}
 			$res = apply_filters(static::$prefix.'_get_thumbnail_context',$res,$post_id,$context,$size,$attr,$options);
-			static::$cache_posts[$post_id]['thumbnail_extended'][$cache_key] = $res;
+			self::cache_posts_set($post_id, array('thumbnail_extended',$cache_key), $res);
 		}
 		return $res;
 	}
@@ -1252,25 +1688,43 @@ class Halftheory_Clean {
 		echo apply_filters(static::$prefix.'_print_post_schema', $res, $itemtype);
 	}
 
+	public static function pagination_args($args = array()) {
+		return wp_parse_args($args,
+			array(
+			'prev_text'          => __('Previous'),
+			'next_text'          => __('Next'),
+			'before_page_number' => '<span class="meta-nav screen-reader-text">'.__('Page').'</span>',
+			'mid_size' => 2,
+		));
+	}
+
 	public static function post_thumbnail($is_singular = null) {
-		if (post_password_required() || is_attachment() || !has_post_thumbnail()) {
+		if (post_password_required() || is_attachment()) {
 			return;
 		}
 		if (is_null($is_singular)) {
 			$is_singular = is_singular();
 		}
-		if ($is_singular) :
+		if ($is_singular && has_post_thumbnail()) :
 		?>
 		<div class="post-thumbnail post-thumbnail-singular">
 			<a class="post-thumbnail" href="<?php the_post_thumbnail_url(); ?>" aria-hidden="true" rel="lightbox-post-thumbnail"><?php the_post_thumbnail('post-thumbnail', array('alt' => the_title_attribute('echo=0'))); ?></a>
 		</div><!-- .post-thumbnail -->
-		<?php else : ?>
+		<?php elseif (!$is_singular) :
+		$options = array(
+			'oembed_thumbnail_url'=>true,
+			'custom_logo'=>false,
+			'search_logo'=>false,
+		);
+		$image = self::get_thumbnail_context(get_the_ID(), 'img', 'medium', array('alt' => the_title_attribute('echo=0')), $options);
+		if (!empty($image)) :
+		?>
 		<div class="post-thumbnail">
-			<a class="post-thumbnail" href="<?php the_permalink(); ?>" aria-hidden="true"><?php the_post_thumbnail('post-thumbnail', array('alt' => the_title_attribute('echo=0'))); ?></a>
+			<a class="post-thumbnail" href="<?php the_permalink(); ?>" aria-hidden="true"><?php echo $image; ?></a>
 		</div><!-- .post-thumbnail -->
 		<?php endif;
+		endif;
 	}
-
 }
 endif;
 ?>

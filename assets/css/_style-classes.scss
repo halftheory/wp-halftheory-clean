@@ -46,6 +46,7 @@ $smaller-size: 0.7;
 	text-overflow: ellipsis;
 	overflow: hidden;
 	white-space: nowrap;
+	max-width: 100%;
 }
 %float-left {
 	float: left;

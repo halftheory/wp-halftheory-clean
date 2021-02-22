@@ -22,6 +22,7 @@ class Halftheory_Helper_CDN {
 			time => time(),
 		)
 		*/
+	private static $cache_directories = array();
 	private static $common = array();
 
 	public function __construct() {
@@ -64,10 +65,11 @@ class Halftheory_Helper_CDN {
         }
         if (class_exists('Halftheory_Clean')) {
 			static::$common['active_plugins'] = Halftheory_Clean::get_active_plugins();
-	    	if (Halftheory_Clean::has_helper_plugin()) {
-	    		static::$common['helper_plugin'] = new Halftheory_Helper_Plugin;
+	    	if ($hp = Halftheory_Clean::get_helper_plugin()) {
+	    		static::$common['helper_plugin'] = $hp;
 				static::$common['transient_name_replacements'] = Halftheory_Clean::$prefix.'_cdn_replacements';
 				static::$common['transient_name_json'] = Halftheory_Clean::$prefix.'_cdn_json';
+				unset($hp);
 	    	}
 		}
 		else {
@@ -143,7 +145,7 @@ class Halftheory_Helper_CDN {
 	    };
 
     	// main function
-    	$func_get_cdn = function($handle, $item) use ($sort_dir_depth, $walk_filename, $func_src_ver_key) {
+    	$func_get_cdn = function($handle, $item) use ($is_scripts, $sort_dir_depth, $walk_filename, $func_src_ver_key) {
     		if (strpos($handle, 'wp-') === 0) {
     			return null;
     		}
@@ -151,6 +153,9 @@ class Halftheory_Helper_CDN {
     			return null;
     		}
     		if (strpos($item->src, static::$common['home_url']) === false) {
+    			return null;
+    		}
+    		if (!$is_scripts && strpos($item->src, 'style.css') !== false) { // too generic
     			return null;
     		}
     		$src_ver_key = $func_src_ver_key($item->src, $item->ver);
@@ -162,6 +167,21 @@ class Halftheory_Helper_CDN {
 				static::$cache_replacements[$src_ver_key]['handle'] = $handle;
 				static::$cache_replacements[$src_ver_key]['time'] = static::$common['time'];
     			return static::$cache_replacements[$src_ver_key]['cdn'];
+    		}
+    		// check directories of previous successes
+			if (function_exists('url_exists')) {
+	    		if (array_key_exists($handle, static::$cache_directories)) {
+	    			if (is_array(static::$cache_directories[$handle])) {
+	    				foreach (static::$cache_directories[$handle] as $value) {
+	    					$value .= pathinfo($item->src, PATHINFO_FILENAME);
+	    					if (url_exists($value)) {
+    							$cdn = $value;
+    							$this->cache_cdn($src_ver_key, $cdn, $handle);
+    							return $cdn;
+	    					}
+	    				}
+	    			}
+	    		}
     		}
     		// new search
     		$gh_uri = null;
@@ -251,6 +271,7 @@ class Halftheory_Helper_CDN {
 						if (strpos($repo_lo, $result_name_lo) === false && strpos($result_name_lo, $repo_lo) === false) {
 							continue;
 						}
+						// returned assets
 						if (isset($api_json->results[0]->assets) && !empty($api_json->results[0]->assets)) {
 							foreach ($api_json->results[0]->assets as $asset) {
 	        					if (!is_object($asset)) {
@@ -291,6 +312,16 @@ class Halftheory_Helper_CDN {
 	        							}
 	        						}
 	        					}
+							}
+						}
+						// or just latest
+						elseif (isset($api_json->results[0]->latest) && isset($api_json->results[0]->version)) {
+							if ($api_json->results[0]->version == $item->ver) {
+        						if (basename($api_json->results[0]->latest) == basename($item->src)) {
+        							$cdn = $api_json->results[0]->latest;
+        							$this->cache_cdn($src_ver_key, $cdn, $handle);
+        							return $cdn;
+        						}
 							}
 						}
 					}
@@ -352,12 +383,13 @@ class Halftheory_Helper_CDN {
     			static::$replacements[$replacements_key][$handle] = null;
     			continue;
     		}
-    		static::$replacements[$replacements_key][$handle] = $cdn = $func_get_cdn($handle, $wp_dependencies->registered[$handle]);
-    		if (empty($cdn)) {
-    			continue;
+    		if ($cdn = $func_get_cdn($handle, $wp_dependencies->registered[$handle])) {
+				static::$replacements[$replacements_key][$handle] = $cdn;
+				// replace
+				$wp_dependencies->registered[$handle]->src = $cdn;
+				// store directory
+				$this->cache_dir($handle, $cdn);
     		}
-    		// replace
-    		$wp_dependencies->registered[$handle]->src = $cdn;
     	}
 
     	$this->cache_save();
@@ -420,6 +452,16 @@ class Halftheory_Helper_CDN {
 			'time' => static::$common['time'],
 		);
 		static::$cache_replacements[$src_ver_key] = $arr;
+	}
+
+	private function cache_dir($handle, $cdn) {
+		if (!array_key_exists($handle, static::$cache_directories)) {
+			static::$cache_directories[$handle] = array();
+		}
+		$str = trailingslashit(dirname($cdn));
+		if (!array_key_exists($str, static::$cache_directories[$handle])) {
+			static::$cache_directories[$handle][] = $str;
+		}
 	}
 
 	private function file_get_json($url, $handle) {

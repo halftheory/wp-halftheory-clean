@@ -396,6 +396,40 @@ class Halftheory_Helper_Plugin {
 		return $template;
 	}
 
+	public function add_shortcode_wpautop_control($shortcode = 'code', $actions = array('the_content','the_excerpt','widget_text_content')) {
+		// see: https://github.com/chiedolabs/shortcode-wpautop-control/blob/master/shortcode-wpautop-control.php
+		if (!shortcode_exists($shortcode)) {
+			return;
+		}
+
+		$func_action = function($str = '') use ($shortcode) {
+			if (!has_shortcode($str, $shortcode)) {
+				return $str;
+			}
+			remove_filter(current_filter(), 'wpautop');
+			$parts_old = preg_split("/".get_shortcode_regex(array($shortcode))."/is", $str, -1, PREG_SPLIT_NO_EMPTY);
+			$parts_new = array_map('trim', $parts_old);
+			$parts_new = array_map('wpautop', $parts_new);
+			$str = strtr($str, array_combine($parts_old, $parts_new));
+			return $str;
+		};
+
+		$actions = $this->make_array($actions);
+		foreach ($actions as $action) {
+			$priority_do_shortcode = has_filter($action, 'do_shortcode');
+			if ($priority_do_shortcode === false) {
+				continue;
+			}
+			$priority_wpautop = has_filter($action, 'wpautop');
+			if ($priority_wpautop === false) {
+				continue;
+			}
+			// usual priority: wpautop (10) do_shortcode (11), so we need to get ahead of both to change them
+			$priority_before = intval(max((min($priority_do_shortcode-1, $priority_wpautop-1)), 0)); // 9?
+			add_filter($action, $func_action, $priority_before);
+		}
+	}
+
 	// options
 	private function get_option_name($name = '', $is_network = null) {
 		if (empty($name)) {
@@ -463,13 +497,12 @@ class Halftheory_Helper_Plugin {
 		if (is_multisite()) {
 			$name_network = $this->get_option_name($name, true);
 			$wpdb->query("DELETE FROM $wpdb->sitemeta WHERE meta_key LIKE '".$name_network."%'");
-			$current_blog_id = get_current_blog_id();
 			$sites = get_sites();
 			foreach ($sites as $key => $value) {
 				switch_to_blog($value->blog_id);
 				$wpdb->query("DELETE FROM $wpdb->options WHERE option_name LIKE '".$name_single."%'");
+				restore_current_blog();
 			}
-			switch_to_blog($current_blog_id);
 		}
 		else {
 			$wpdb->query("DELETE FROM $wpdb->options WHERE option_name LIKE '".$name_single."%'");
@@ -534,13 +567,12 @@ class Halftheory_Helper_Plugin {
 		if (is_multisite()) {
 			$transient_network = $this->get_transient_name($transient, true);
 			$wpdb->query("DELETE FROM $wpdb->sitemeta WHERE meta_key LIKE '_site_transient_".$transient_network."%' OR meta_key LIKE '_site_transient_timeout_".$transient_network."%'");
-			$current_blog_id = get_current_blog_id();
 			$sites = get_sites();
 			foreach ($sites as $key => $value) {
 				switch_to_blog($value->blog_id);
 				$wpdb->query("DELETE FROM $wpdb->options WHERE option_name LIKE '_transient_".$transient_single."%' OR option_name LIKE '_transient_timeout_".$transient_single."%'");
+				restore_current_blog();
 			}
-			switch_to_blog($current_blog_id);
 		}
 		else {
 			$wpdb->query("DELETE FROM $wpdb->options WHERE option_name LIKE '_transient_".$transient_single."%' OR option_name LIKE '_transient_timeout_".$transient_single."%'");
@@ -606,13 +638,12 @@ class Halftheory_Helper_Plugin {
 		$name = $this->get_postmeta_name($name);
 		global $wpdb;
 		if (is_multisite()) {
-			$current_blog_id = get_current_blog_id();
 			$sites = get_sites();
 			foreach ($sites as $key => $value) {
 				switch_to_blog($value->blog_id);
 				$wpdb->query("DELETE FROM $wpdb->postmeta WHERE meta_key LIKE '".$name."%'");
+				restore_current_blog();
 			}
-			switch_to_blog($current_blog_id);
 		}
 		else {
 			$wpdb->query("DELETE FROM $wpdb->postmeta WHERE meta_key LIKE '".$name."%'");
@@ -694,7 +725,7 @@ class Halftheory_Helper_Plugin {
 		}
 		$arr = explode($sep, $str);
 		$arr = array_map('trim', $arr);
-		$arr = array_filter($arr);
+		$arr = array_filter($arr, function($v) { return !$this->empty_notzero($v); });
 		return $arr;
 	}
 
@@ -738,7 +769,7 @@ class Halftheory_Helper_Plugin {
 		if (empty($str)) {
 			return false;
 		}
-		if (did_action('get_header') == 0) {
+		if (did_action('get_header') == 0 && !wp_doing_ajax()) {
 			return false;
 		}
 		if (is_404()) {
@@ -873,21 +904,27 @@ class Halftheory_Helper_Plugin {
 
 		// find / replace
 		$textarr = wp_html_split($str);
+		$link_open = false;
 		$changed = false;
 		// Loop through delimiters (elements) only.
 		for ($i = 0, $c = count($textarr); $i < $c; $i += 2) {
 			// check the previous tag
 			if ($i > 0) {
 				if (strpos($textarr[$i-1], '<a ') === 0) { // skip link text
+					$link_open = true;
 					continue;
 				}
 				elseif (strpos($textarr[$i-1], '</a>') === 0) { // after a link is fine
+					$link_open = false;
 				}
 				elseif (!empty($args['in_html_tags'])) {
 					if (!preg_match("/^<(".implode("|",$args['in_html_tags']).")( |\/|>)/is", $textarr[$i-1])) {
 						continue;
 					}
 				}
+			}
+			if ($link_open) {
+				continue;
 			}
 			// unlimited
 			if ($args['limit'] === -1) {

@@ -39,7 +39,7 @@ small, .small { font-size: 12.8px; font-size: 0.8rem; }
 
 .nobr { white-space: nowrap; }
 
-.single-line { text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
+.single-line { text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 100%; }
 
 .float-left { float: left; }
 
