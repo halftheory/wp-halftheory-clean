@@ -541,7 +541,14 @@ class Halftheory_Helper_Admin {
 			if (!function_exists('WP_Filesystem')) {
 				require_once(ABSPATH.'wp-admin/includes/file.php');
 			}
-			$fs = WP_Filesystem();
+			$args = false;
+			if (function_exists('request_filesystem_credentials')) {
+				$tmp = request_filesystem_credentials(false);
+				if (is_array($tmp)) {
+					$args = $tmp;
+				}
+			}
+			$fs = WP_Filesystem($args);
 			if ($fs === false) {
 				return false;
 			}
