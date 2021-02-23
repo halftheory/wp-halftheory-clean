@@ -67,11 +67,6 @@ if (typeof infinite_scroll === 'object') {
 			count = parseInt(infinite_scroll.paged,10) + 1;
 		}
 
-		//window.load
-		$(window).load(function() {
-			container_bottom = containerBottom();
-		});//window.load
-
 		//window.resize
 		$(window).resize(function() {
 			if(this.resizeTO) clearTimeout(this.resizeTO);
@@ -87,6 +82,7 @@ if (typeof infinite_scroll === 'object') {
 			return true;
 		});//window.resize
 
+		//window.scroll
 		$(window).scroll(function() {
 			if(this.resizeTO) clearTimeout(this.resizeTO);
 			this.resizeTO = setTimeout(function() {
@@ -107,9 +103,14 @@ if (typeof infinite_scroll === 'object') {
 				container_bottom = containerBottom();
 			}
 			return true;
-		});
+		});//window.scroll
 
 	});//document.ready
+
+	//window.load
+	$(window).on('load',function() {
+		container_bottom = containerBottom();
+	});//window.load
 
 }
 })(jQuery);

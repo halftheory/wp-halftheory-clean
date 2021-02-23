@@ -391,7 +391,7 @@ class Halftheory_Clean {
 			return;
 		}
 		$scripts->remove('jquery');
-		$scripts->add('jquery', false, array('jquery-core'), '1.12.4');
+		$scripts->add('jquery', false, array('jquery-core'), '3.5.1');
 	}
 	public function wp_enqueue_scripts() {
 		// header
