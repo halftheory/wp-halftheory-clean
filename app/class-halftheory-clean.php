@@ -254,8 +254,6 @@ class Halftheory_Clean {
 	public function after_setup_theme() { // first available action after plugins_loaded
 		if (is_front_end()) {
 			define('CURRENT_URL', get_current_uri());
-			$url = trailingslashit(remove_query_arg(array_keys($_GET), CURRENT_URL));
-			define('CURRENT_URL_NOQUERY', $url);
 		}
 		add_theme_support('automatic-feed-links');
 		add_theme_support('post-thumbnails', array('post', 'page'));
