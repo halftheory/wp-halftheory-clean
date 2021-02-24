@@ -132,7 +132,7 @@ if (!function_exists('get_visitor_ip')) {
 }
 
 if (!function_exists('get_current_uri')) {
-	function get_current_uri() {
+	function get_current_uri($keep_query = false) {
 	 	$res  = is_ssl() ? 'https://' : 'http://';
 	 	$res .= isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '';
 	 	$res .= isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : $_SERVER['PHP_SELF'];
@@ -140,6 +140,16 @@ if (!function_exists('get_current_uri')) {
 			if (!empty($_SERVER["HTTP_REFERER"])) {
 				$res = $_SERVER["HTTP_REFERER"];
 			}
+		}
+		if (!$keep_query) {
+			$remove = array();
+			if ($str = parse_url($res, PHP_URL_QUERY)) {
+				$remove[] = '?'.$str;
+			}
+			if ($str = parse_url($res, PHP_URL_FRAGMENT)) {
+				$remove[] = '#'.$str;
+			}
+			$res = str_replace($remove, '', $res);
 		}
 		return $res;
 	}
