@@ -74,6 +74,7 @@ class Halftheory_Clean {
 		add_action('init', array($this,'init'), 20);
 		add_action('widgets_init', array($this,'widgets_init_remove_recent_comments'), 20);
 		add_action('widgets_init', array($this,'widgets_init'), 20);
+		add_filter('request', array($this,'request'), 20);
 		add_action('template_redirect', array($this,'template_redirect'), 20);
 		add_filter('wp_default_scripts', array($this,'wp_default_scripts_remove_jquery_migrate'));
 		add_action('wp_enqueue_scripts', array($this,'wp_enqueue_scripts'), 20);
@@ -358,13 +359,29 @@ class Halftheory_Clean {
 		));
 	}
 
+	public function request($query_vars = array()) {
+		// remove some post_types from feed
+		if (isset($query_vars['feed'])) {
+			$query_vars['post_type'] = !isset($query_vars['post_type']) ? array_values(get_post_types(array('public'=>true),'names')) : make_array($query_vars['post_type']);
+			$remove = array('page','attachment','revision','rl_gallery');
+			$query_vars['post_type'] = array_values(array_diff($query_vars['post_type'], $remove));
+		}
+		// remove some post_types from search
+		if (isset($query_vars['s']) && is_front_end()) {
+			$query_vars['post_type'] = !isset($query_vars['post_type']) ? array_values(get_post_types(array('public'=>true),'names')) : make_array($query_vars['post_type']);
+			$remove = array('attachment','revision','rl_gallery');
+			$query_vars['post_type'] = array_values(array_diff($query_vars['post_type'], $remove));
+		}
+		return $query_vars;
+	}
+
 	public function template_redirect() {
 		if (!is_front_end()) {
 			return;
 		}
 		// search urls
 		if (is_search() && isset($_GET['s'])) {
-			$url = !empty($_GET['s']) ? home_url("/search/").str_replace('%2F', '/', rawurlencode(get_query_var('s'))) : home_url();
+			$url = !empty($_GET['s']) ? home_url("/search/").str_replace('%2F', '/', rawurlencode(trim(get_query_var('s')))) : home_url();
 			if (wp_redirect_extended($url)) {
 				exit;
 			}

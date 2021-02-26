@@ -535,15 +535,39 @@ class Halftheory_Helper_Admin {
 
 	/* functions */
 
-	public function wp_filesystem() {
+	public function wp_filesystem($method = '') {
 		global $wp_filesystem;
+		$do_fs = false;
 		if (!$wp_filesystem || !is_object($wp_filesystem)) {
+			$do_fs = true;
+		}
+		elseif (!empty($method) && $method !== $wp_filesystem->method) {
+			$do_fs = true;
+		}
+		if ($do_fs) {
 			if (!function_exists('WP_Filesystem')) {
 				require_once(ABSPATH.'wp-admin/includes/file.php');
 			}
+			// overwrite function 'get_filesystem_method'
+			if (!empty($method)) {
+				$do_filter = false;
+				if (!defined('FS_METHOD')) {
+					$do_filter = true;
+				}
+				elseif (FS_METHOD !== $method) {
+					$do_filter = true;
+				}
+				if ($do_filter) {
+					$func = function($method_filter = '', $args = array(), $context = '', $allow_relaxed_file_ownership = false) use ($method) {
+						return $method;
+					};
+					add_filter('filesystem_method',$func,10,4);
+				}
+			}
+			// credentials?
 			$args = false;
 			if (function_exists('request_filesystem_credentials')) {
-				$tmp = request_filesystem_credentials(false);
+				$tmp = request_filesystem_credentials(false, $method);
 				if (is_array($tmp)) {
 					$args = $tmp;
 				}
@@ -586,7 +610,7 @@ class Halftheory_Helper_Admin {
 			}
 		}
 
-		$wp_filesystem = $this->wp_filesystem();
+		$wp_filesystem = $this->wp_filesystem('direct');
 		if (!$wp_filesystem) {
 			return false;
 		}
