@@ -360,16 +360,23 @@ class Halftheory_Clean {
 	}
 
 	public function request($query_vars = array()) {
-		// remove some post_types from feed
-		if (isset($query_vars['feed'])) {
-			$query_vars['post_type'] = !isset($query_vars['post_type']) ? array_values(get_post_types(array('public'=>true),'names')) : make_array($query_vars['post_type']);
-			$remove = array('page','attachment','revision','rl_gallery');
-			$query_vars['post_type'] = array_values(array_diff($query_vars['post_type'], $remove));
+		if (!is_front_end()) {
+			return $query_vars;
 		}
-		// remove some post_types from search
-		if (isset($query_vars['s']) && is_front_end()) {
+		// search
+		if (isset($query_vars['s'])) {
+			// clean the search string
+			$query_vars['s'] = trim(str_replace('%20', ' ', $query_vars['s']));
+			// remove some post_types from search
 			$query_vars['post_type'] = !isset($query_vars['post_type']) ? array_values(get_post_types(array('public'=>true),'names')) : make_array($query_vars['post_type']);
 			$remove = array('attachment','revision','rl_gallery');
+			$query_vars['post_type'] = array_values(array_diff($query_vars['post_type'], $remove));
+		}
+		// feed
+		if (isset($query_vars['feed'])) {
+			// remove some post_types from feed
+			$query_vars['post_type'] = !isset($query_vars['post_type']) ? array_values(get_post_types(array('public'=>true),'names')) : make_array($query_vars['post_type']);
+			$remove = array('page','attachment','revision','rl_gallery');
 			$query_vars['post_type'] = array_values(array_diff($query_vars['post_type'], $remove));
 		}
 		return $query_vars;
