@@ -668,7 +668,7 @@ if (!function_exists('the_excerpt_conditions')) {
 		if (empty($str)) {
 			$res = false;
 		}
-		if (did_action('get_header') == 0 && !wp_doing_ajax()) {
+		if (did_action('get_header') == 0 && !wp_doing_ajax() && !is_feed()) {
 			$res = false;
 		}
 		if (is_404()) {
@@ -698,7 +698,7 @@ if (!function_exists('the_content_conditions')) {
 		if (empty($str)) {
 			$res = false;
 		}
-		if (did_action('get_header') == 0 && !wp_doing_ajax()) {
+		if (did_action('get_header') == 0 && !wp_doing_ajax() && !is_feed()) {
 			$res = false;
 		}
 		if (is_404()) {
@@ -839,6 +839,30 @@ if (!function_exists('strip_all_shortcodes')) {
 		if ($go) {
 			$str = preg_replace("/\[[^\]]{5,}\]/is", "", $str); // more than 4 letters
 		}
+		return $str;
+	}
+}
+
+if (!function_exists('strip_shortcodes_extended')) {
+	function strip_shortcodes_extended($str = '', $tagnames = array(), $strict = false) {
+		if (empty($str) || empty($tagnames)) {
+			return $str;
+		}
+		$remove = $tagnames;
+		if (!$strict) {
+			global $shortcode_tags;
+			$shortcode_tags_keys = array_keys($shortcode_tags);
+			foreach ($tagnames as $value) {
+				foreach ($shortcode_tags_keys as $v) {
+					if (stripos($v, $value) !== false) {
+						$remove[] = $v;
+					}
+				}
+			}
+			$remove = array_unique($remove);
+		}
+		$pattern = get_shortcode_regex($remove);
+		$str = preg_replace("/$pattern/", '' , $str);
 		return $str;
 	}
 }
