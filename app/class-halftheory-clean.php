@@ -104,6 +104,7 @@ class Halftheory_Clean {
 		add_filter('get_wp_title_rss', array($this,'get_wp_title_rss'));
 		add_filter('the_author', array($this,'the_author'));
 		add_action('pre_ping', array($this,'no_self_ping'));
+		add_filter('the_guid', array($this,'the_guid'), 10, 2);
 		add_filter('the_content', array($this,'the_content'), 12); // after autoembeds (priority 7), after shortcodes (priority 11), before obfuscate_email (priority 15)
 		remove_filter('the_content', 'convert_smilies', 20);
 		remove_filter('get_the_excerpt', 'wp_trim_excerpt', 10);
@@ -699,6 +700,15 @@ class Halftheory_Clean {
 		}
 	}
 
+	public function the_guid($guid = '', $id = 0) {
+		if (is_feed() && !empty($id)) {
+			if ($str = get_permalink($id)) {
+				$guid = $str;
+			}
+		}
+		return $guid;
+	}
+
 	public function the_content($str = '') {
 		if (!the_content_conditions($str)) {
 			return $str;
@@ -715,18 +725,49 @@ class Halftheory_Clean {
 		if (!the_excerpt_conditions($str)) {
 			return $str;
 		}
-		$args = array(
-			'allowable_tags' => array('a','b','del','em','i','strong','u'),
-			'plaintext' => false,
-			'single_line' => true,
-			'trim_urls' => true,
-			'strip_shortcodes' => true,
-			'strip_emails' => true,
-			'strip_urls' => false,
-			'add_dots' => true,
-			'add_stop' => true,
-		);
+		$str = strip_shortcodes_extended($str, array('caption','gallery','playlist','audio','video','embed'));
+		$str = do_shortcode($str);
+		if (is_feed()) {
+			$args = array(
+				'allowable_tags' => array('a','b','del','em','i','strong','u','br'),
+				'plaintext' => false,
+				'single_line' => false,
+				'trim_urls' => true,
+				'strip_shortcodes' => true,
+				'strip_emails' => true,
+				'strip_urls' => false,
+				'add_dots' => true,
+				'add_stop' => true,
+			);
+		}
+		else {
+			$args = array(
+				'allowable_tags' => array('a','b','del','em','i','strong','u'),
+				'plaintext' => false,
+				'single_line' => true,
+				'trim_urls' => true,
+				'strip_shortcodes' => true,
+				'strip_emails' => true,
+				'strip_urls' => false,
+				'add_dots' => true,
+				'add_stop' => true,
+			);
+		}
+		// remove tags before excerpt
+		$tags = array_fill_keys($args['allowable_tags'], '');
+		$tags['a'] = array('href','title');
+		$str = strip_tags_attr($str, $tags);
 		$str = get_excerpt($str, 500, $args);
+		// feed - prepend thumbnail
+		if (is_feed() && !empty($post)) {
+			if ($image = self::get_thumbnail_context($post, 'img', 'medium', array('class'=>''), array('oembed_thumbnail_url'=>true, 'custom_logo'=>false, 'search_logo'=>false))) {
+				$arr = array(
+					'<a href="'.esc_url(get_permalink($post)).'">'.$image.'</a>',
+					trim($str),
+				);
+				$str = implode("<br />\n", array_filter($arr));
+			}
+		}
 		$str = set_url_scheme_blob($str);
 		$str = make_clickable($str);
 		return $str;
@@ -1155,6 +1196,9 @@ class Halftheory_Clean {
 	/* functions - cache_posts */
 
 	public static function cache_posts_init($post_id = null) {
+		if (is_object($post_id)) {
+			$post_id = isset($post_id->ID) ? $post_id->ID : null;
+		}
 		if (is_null($post_id)) {
 			$post_id = self::get_page_id();
 		}
