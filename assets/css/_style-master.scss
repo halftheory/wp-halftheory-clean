@@ -238,10 +238,20 @@ $iframe-audio: iframes("soundcloud.com/","spotify.com/","mixcloud.com/");
 
 @mixin transition($property: all, $duration: 0.5s, $timing-function: ease, $delay: 0s, $important: '') {
 	@if length($property) == 1 {
-		@include vendor-prefix(transition, #{$property} #{make-time($duration)} #{$timing-function} #{make-time($delay)} #{$important});
+		@if $important != '' {
+			@include vendor-prefix(transition, #{$property} #{make-time($duration)} #{$timing-function} #{make-time($delay)} #{$important});
+		}
+		@else {
+			@include vendor-prefix(transition, #{$property} #{make-time($duration)} #{$timing-function} #{make-time($delay)});
+		}
 	}
 	@else {
-		transition-property: join($property, (), comma) $important;
+		@if $important != '' {
+			transition-property: join($property, (), comma) $important;
+		}
+		@else {
+			transition-property: join($property, (), comma);
+		}
 		transition-duration: make-time($duration);
 		transition-timing-function: $timing-function;
 		transition-delay: make-time($delay);

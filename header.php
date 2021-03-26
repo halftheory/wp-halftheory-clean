@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html <?php language_attributes(); ?> class="no-js">
-<head itemscope itemtype="<?php echo set_url_scheme('http://schema.org/WebPage'); ?>">
+<head itemscope itemtype="<?php echo esc_attr(set_url_scheme('http://schema.org/WebPage')); ?>">
 <meta charset="<?php bloginfo('charset'); ?>">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="format-detection" content="telephone=no">
 <link rel="profile" href="http://gmpg.org/xfn/11">
-<?php if (is_singular() && pings_open(get_queried_object())) : ?>
+<?php if ( is_singular() && pings_open(get_queried_object()) ) : ?>
 <link rel="pingback" href="<?php bloginfo('pingback_url'); ?>">
 <?php endif; ?>
 <title><?php wp_title('-', true, ''); ?></title>
@@ -27,17 +27,21 @@
 				</div>
 			</div>
 
-			<?php if (has_nav_menu('primary-menu')) : ?><nav id="navigation" role="navigation" class="clear" aria-label="<?php esc_attr_e('Primary Menu'); ?>">
+			<?php if ( has_nav_menu('primary-menu') ) : ?>
+				<nav id="navigation" role="navigation" class="clear" aria-label="<?php esc_attr_e('Primary Menu'); ?>">
 				<?php
-				wp_nav_menu(array(
-					'theme_location' 	=> 'primary-menu',
-					'menu_id' 			=> 'menu',
-					'menu_class' 		=> '',
-					'container' 		=> '',
-					'depth' 			=> 2,
-				 ));
+				wp_nav_menu(
+					array(
+						'theme_location' => 'primary-menu',
+						'menu_id'        => 'menu',
+						'menu_class'     => '',
+						'container'      => '',
+						'depth'          => 2,
+				 	)
+				);
 				?>
-			</nav><?php endif; ?>
+				</nav>
+			<?php endif; ?>
 
 		</header>
 
