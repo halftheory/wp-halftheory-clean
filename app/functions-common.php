@@ -1313,8 +1313,8 @@ if ( ! function_exists('get_excerpt') ) {
 		// TODO: find a fast way of checking multibyte strings here.
 		if ( strlen(strip_tags($text)) <= $length ) {
 			if ( $args['add_stop'] && ! empty(strip_tags($text)) ) {
+				$text = preg_replace("/[^$last_char]+[\s]*$/is", '', $text);
 				$text = rtrim($text, '. ') . '.';
-				$text = preg_replace("/[^$last_char]+(\.)[\s]*$/is", "$1", $text);
 			}
 			if ( $args['plaintext'] ) {
 				return $text;
@@ -1324,7 +1324,7 @@ if ( ! function_exists('get_excerpt') ) {
 			$length_new = $length;
 			if ( $args['plaintext'] && ! preg_match("/[^$last_char]/is", mb_substr($text, $length, 1)) ) {
 				$length_new = mb_strrpos( mb_substr($text, 0, $length), ' ');
-			} elseif ( ! preg_match("/[^$last_char]/is", mb_substr($text, $length, 1))) {
+			} elseif ( ! preg_match("/[^$last_char]/is", mb_substr($text, $length, 1)) ) {
 				$length_new = mb_strrpos( mb_substr($text, 0, $length), ' ');
 			}
 			$text = mb_substr($text, 0, $length_new, 'UTF-8') . ' ' . wp_trim_words(mb_substr($text, $length_new, null, 'UTF-8'), 1, '');
@@ -1337,6 +1337,7 @@ if ( ! function_exists('get_excerpt') ) {
 				}
 			}
 			if ( $args['add_dots'] && ! empty(strip_tags($text)) ) {
+				$text = preg_replace("/[^$last_char]+[\s]*$/is", '', $text);
 				// add a space if the last word is a url - avoids conflicts with make_clickable.
 				if ( $arr = preg_split("/[\s,;]+/s", $text) ) {
 					if ( strpos(end($arr), 'http') === 0 ) {
@@ -1352,10 +1353,9 @@ if ( ! function_exists('get_excerpt') ) {
 				} else {
 					$text .= __('&hellip;');
 				}
-				$text = preg_replace("/[^$last_char]+(\.\.\.|&#8230;|&hellip;)[\s]*$/is", "$1", $text);
 			} elseif ( $args['add_stop'] && ! empty(strip_tags($text)) ) {
+				$text = preg_replace("/[^$last_char]+[\s]*$/is", '', $text);
 				$text = rtrim($text, '. ') . '.';
-				$text = preg_replace("/[^$last_char]+(\.)[\s]*$/is", "$1", $text);
 			}
 		}
 		// add line breaks?
