@@ -50,7 +50,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 				return;
 			}
 			$this->plugins = array();
-			$active_plugins  = $this->get_active_plugins();
+			$active_plugins = $this->get_active_plugins();
 			if ( empty($active_plugins) ) {
 				return;
 			}
@@ -58,19 +58,41 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 				return str_replace(WP_PLUGIN_DIR . '/', '', $plugin);
 			};
 			$active_plugins = array_map($func, $active_plugins);
-			foreach ( $active_plugins as $value ) {
-				if ( isset($this->plugins[ $value ]) ) {
-					continue;
+			// Collect all possible locations of /plugins.
+			$plugins_dirs = array();
+			if ( is_dir(get_stylesheet_directory() . '/app/plugins') ) {
+				$plugins_dirs[] = get_stylesheet_directory() . '/app/plugins';
+			}
+			if ( class_exists('ReflectionClass') ) {
+				foreach ( class_parents($this, false) as $value ) {
+					$obj = new ReflectionClass($value);
+		    		$str = dirname($obj->getFileName());
+		    		if ( is_dir($str . '/plugins') ) {
+		    			$plugins_dirs[] = $str . '/plugins';
+		    		}
 				}
-				$theme_plugin = false;
-				if ( is_child_theme() && is_readable(get_stylesheet_directory() . '/app/plugins/' . $value) ) {
-					include_once get_stylesheet_directory() . '/app/plugins/' . $value;
-				} elseif ( is_readable(__DIR__ . '/plugins/' . $value) ) {
-					include_once __DIR__ . '/plugins/' . $value;
-				}
-				if ( $theme_plugin && class_exists($theme_plugin, false) ) {
-					$this->plugins[ $value ] = new $theme_plugin();
-					unset($theme_plugin);
+			}
+			if ( is_dir(get_template_directory() . '/app/plugins') ) {
+				$plugins_dirs[] = get_template_directory() . '/app/plugins';
+			}
+    		if ( is_dir(__DIR__ . '/plugins') ) {
+    			$plugins_dirs[] = __DIR__ . '/plugins';
+    		}
+    		$plugins_dirs = array_unique($plugins_dirs);
+    		$plugins_dirs = array_reverse($plugins_dirs);
+    		// Add the classes.
+			foreach ( $active_plugins as $plugin ) {
+				foreach ( $plugins_dirs as $dir ) {
+					if ( is_readable($dir . '/' . $plugin) ) {
+						$theme_plugin = false;
+						include_once $dir . '/' . $plugin;
+						if ( $theme_plugin && class_exists($theme_plugin, false) ) {
+							if ( ! isset($this->plugins[ $plugin ]) ) {
+								$this->plugins[ $plugin ] = array();
+							}
+							$this->plugins[ $plugin ][] = new $theme_plugin();
+						}
+					}
 				}
 			}
 		}
@@ -109,7 +131,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			add_action('wp_head', array( $this, 'wp_head' ), 20);
 			add_action('wp_head', array( $this, 'wp_site_icon' ), 100);
 			remove_filter('wp_title', 'wptexturize');
-			add_filter('wp_title', array( $this, 'wp_title' ));
+			add_filter('wp_title', array( $this, 'wp_title' ), 10, 3);
 			add_filter('protected_title_format', array( $this, 'protected_title_format' ));
 			add_filter('private_title_format', array( $this, 'private_title_format' ));
 			add_filter('get_wp_title_rss', array( $this, 'get_wp_title_rss' ));
@@ -120,8 +142,9 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			add_filter('the_content', array( $this, 'the_content' ), 12);
 			remove_filter('the_content', 'convert_smilies', 20);
 			remove_filter('get_the_excerpt', 'wp_trim_excerpt', 10);
-			add_filter('get_the_excerpt', array( $this, 'get_the_excerpt' ));
+			add_filter('get_the_excerpt', array( $this, 'get_the_excerpt' ), 10, 2);
 			add_filter('embed_oembed_html', array( $this, 'embed_oembed_html' ), 10, 4);
+			add_filter('post_type_archive_link', array( $this, 'post_type_archive_link' ), 10, 2);
 
 			if ( apply_filters(static::$prefix . '_image_size_actions', true) ) {
 				add_filter('big_image_size_threshold', array( $this, 'big_image_size_threshold' ), 10, 4);
@@ -278,6 +301,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 				'medium_large_size_h' => 1000,
 				'large_size_w' => 2000,
 				'large_size_h' => 2000,
+				'uploads_use_yearmonth_folders' => 1,
 				// Permalinks.
 				'permalink_structure' => '/%category%/%postname%/',
 			);
@@ -387,7 +411,6 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 					'after_title'   => '</h2>',
 				)
 			);
-
 			register_sidebar(
 				array(
 					'name'          => 'Content Bottom 1',
@@ -399,7 +422,6 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 					'after_title'   => '</h2>',
 				)
 			);
-
 			register_sidebar(
 				array(
 					'name'          => 'Content Bottom 2',
@@ -560,7 +582,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			if ( ! empty($terms) ) {
 				$func = function ( $str = '' ) {
 					$str = preg_replace("/^###[^#]*###/i", '', $str);
-					if ( $this->is_title_bad($str) ) {
+					if ( is_title_bad($str) ) {
 						return '';
 					}
 					return $str;
@@ -602,7 +624,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			if ( $description === $description_trim ) {
 				$description .= '.';
 			} else {
-				$description_trim = preg_replace("/[^\w>;]+(\.\.\.|&#8230;|&hellip;)[\s]*$/i", "$1", $description_trim);
+				$description_trim = preg_replace("/[^\w>;]+(\.\.\.|&#8230;|&hellip;)[\s]*$/i", '$1', $description_trim);
 				$description = $description_trim;
 			}
 			$arr['description'] = $description;
@@ -732,12 +754,13 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			echo '<link rel="apple-touch-icon-precomposed" href="' . esc_url($favicon_uri) . 'apple-icon-180x180.png" />' . "\n";
 		}
 
-		public function wp_title( $title_old, $sep = '-', $seplocation = '' ) {
+		public function wp_title( $title, $sep = '-', $seplocation = '' ) {
 			// prepend ancestors to $title here.
 			// change $title with other filters - https://developer.wordpress.org/reference/functions/wp_title/
 			if ( ! is_front_end() ) {
 				return $title_old;
 			}
+			$title_old = $title;
 			$title = $this->get_title(null, ': ');
 			$ancestors = $this->get_ancestors();
 			if ( ! empty($ancestors) ) {
@@ -934,6 +957,21 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			return $cache;
 		}
 
+		public function post_type_archive_link( $link, $post_type ) {
+			if ( $link === get_home_url() && in_the_loop() ) {
+				// try a parent page.
+        		$path = get_url_path(get_permalink());
+				while ( dirname($path) !== $path ) {
+					if ( $tmp = get_page_by_path($path) ) {
+						$link = get_permalink($tmp);
+						break;
+					}
+					$path = dirname($path);
+				}
+			}
+			return $link;
+		}
+
 		public function big_image_size_threshold( $threshold = 2000, $imagesize = array(), $file = '', $attachment_id = 0 ) {
 			$large = get_option('large_size_w');
 			if ( ! empty($large) && is_numeric($large) ) {
@@ -1005,10 +1043,11 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			return $path;
 		}
 
-		public function get_image_context( $post_id = 0, $context = 'url', $size = 'medium', $attr = '' ) {
+		public function get_image_context( $post_id = 0, $context = 'url', $size = 'medium', $attr = array() ) {
 			if ( ! wp_attachment_is_image($post_id) ) {
 				return false;
 			}
+			$attr = apply_filters(static::$prefix . '_get_image_context_attr', $attr, $post_id, $context, $size);
 			$res = false;
 			switch ( $context ) {
 				case 'id':
@@ -1040,6 +1079,72 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			return $res;
 		}
 
+		public function get_video_context( $post_id = 0, $context = 'url', $attr = array() ) {
+			if ( ! wp_attachment_is('video', $post_id) ) {
+				return false;
+			}
+			$attr = apply_filters(static::$prefix . '_get_video_context_attr', $attr, $post_id, $context);
+			$res = false;
+			switch ( $context ) {
+				case 'id':
+					$res = (int) $post_id;
+					break;
+				case 'file':
+					$res = $this->get_attachment_file_path($post_id);
+					break;
+				case 'metadata':
+					// returns array - width, height, file.
+					$res = wp_get_attachment_metadata($post_id);
+					break;
+				case 'video':
+					// <video
+					// see 'wp_video_shortcode'.
+					$defaults_attr = array(
+						'autoplay' => true,
+						'disablepictureinpicture' => true,
+						'controls' => false,
+						'controlslist' => 'nodownload',
+						'loop' => true,
+						'muted' => true,
+						'playsinline' => true,
+						'preload' => 'auto',
+						'width' => '100%',
+					);
+					$attr = array_merge($defaults_attr, $attr);
+					if ( isset($attr['poster']) ) {
+						$attr['poster'] = esc_url($attr['poster']);
+					}
+					$attr_strings = array();
+					foreach ( $attr as $k => $v ) {
+						if ( is_bool($v) ) {
+							if ( $v ) {
+								$attr_strings[] = $k;
+							} else {
+								$attr_strings[] = $k . '="false"';
+							}
+						} else {
+							$attr_strings[] = $k . '="' . esc_attr( $v ) . '"';
+						}
+					}
+					$res = sprintf('<video %s>', implode(' ', $attr_strings));
+					$res .= sprintf('<source type="%s" src="%s" />', get_post_mime_type($post_id), esc_url(wp_get_attachment_url($post_id)));
+					$res .= '</video>';
+					break;
+				case 'link':
+					// <a href="file.mp4"><video
+					$res = '<a href="' . esc_url(wp_get_attachment_url($post_id)) . '">' . $this->get_video_context($post_id, 'video', $attr) . '</a>';
+					break;
+				case 'url':
+				default:
+					$res = wp_get_attachment_url($post_id);
+					break;
+			}
+			if ( empty_notzero($res) ) {
+				return false;
+			}
+			return $res;
+		}
+
 		public function get_oembed_thumbnail_context( $post_id = 0, $context = 'url', $attr = '' ) {
 			$res = false;
 			if ( empty($post_id) ) {
@@ -1059,7 +1164,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 					break;
 				}
 			}
-			if ( ! $thumbnail_obj ) {
+			if ( ! $thumbnail_obj || ! is_object($thumbnail_obj) ) {
 				return $res;
 			}
 			$thumbnail_attr = array(
@@ -1136,6 +1241,9 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			// return original urls as array keys.
 			// but store urls in a normalized way.
 			$oembed = _wp_oembed_get_object();
+			if ( empty($oembed) || ! is_object($oembed) ) {
+				$oembed = false;
+			}
 			$res_db = array();
 			foreach ( $urls as $url ) {
 				$key_db = untrailingslashit(set_url_scheme($url, 'http'));
@@ -1153,11 +1261,15 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 					unset($transient_urls_new[ $key_db ]);
 				}
 				// oembed.
-				if ( $obj = $oembed->get_data($key_db, array( 'discover' => false )) ) {
-					if ( isset($obj->thumbnail_url) ) {
-						if ( ! empty($obj->thumbnail_url) && strpos($obj->thumbnail_url, 'placeholder') === false ) {
-							$res_db[ $key_db ] = $transient_urls_new[ $key_db ] = $obj;
-							continue;
+				if ( $oembed ) {
+					if ( $obj = $oembed->get_data($key_db, array( 'discover' => false )) ) {
+						if ( is_object($obj) ) {
+							if ( isset($obj->thumbnail_url) ) {
+								if ( ! empty($obj->thumbnail_url) && strpos($obj->thumbnail_url, 'placeholder') === false ) {
+									$res_db[ $key_db ] = $transient_urls_new[ $key_db ] = $obj;
+									continue;
+								}
+							}
 						}
 					}
 				}
@@ -1234,7 +1346,11 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			} elseif ( count($values) > count($keys) ) {
 				$values = array_slice($values, 0, count($keys));
 			}
-			return http_build_query( array_filter( array_combine($keys, $values) ) );
+			$arr = array_filter(array_combine($keys, $values));
+			if ( empty($arr) ) {
+				$arr = array_fill_keys($keys, '');
+			}
+			return http_build_query($arr);
 		}
 
 		public function get_page_id( $post_id = 0 ) {
@@ -1428,7 +1544,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 								$terms = wp_get_post_terms($post_id, $taxonomy->name);
 								if ( ! empty($terms) && ! is_wp_error($terms) ) {
 									foreach ( $terms as $term ) {
-										if ( $this->is_title_bad($term->name) ) {
+										if ( is_title_bad($term->name) ) {
 											continue;
 										}
 										$ancestors[] = $term->name;
@@ -1464,14 +1580,8 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 				} elseif ( is_login_page() ) {
 					$title = __('Login');
 				} elseif ( is_posts_page($post_id) ) {
-					$default_category = get_option('default_category');
-					if ( ! empty($default_category) ) {
-						$term = get_term($default_category, 'category');
-						if ( ! empty($term) && ! is_wp_error($term) ) {
-							if ( ! $this->is_title_bad($term->name) ) {
-								$title = $term->name;
-							}
-						}
+					if ( $tmp = get_default_category_term('name', true) ) {
+						$title = $tmp;
 					}
 				} else {
 					// these could be a combination, use the main query to find out which is first.
@@ -1631,7 +1741,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 				}
 			}
 
-			if ( is_home_page($post_id) ) {
+			if ( ! in_the_loop() && is_home_page() ) {
 				$ancestors[] = get_bloginfo('description');
 			}
 
@@ -1677,11 +1787,6 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 				$res = $this->cache_posts_set($post_id, 'ancestors', $ancestors);
 			}
 			return $res;
-		}
-
-		private function is_title_bad( $str = '' ) {
-			$arr = array( '', 'Uncategorized', 'uncategorized', 'Uncategorised', 'uncategorised' );
-			return in_array(trim($str), $arr, true);
 		}
 
 		public function get_thumbnail_context( $post_id = null, $context = 'url', $size = 'medium', $attr = '', $options = array() ) {
@@ -1738,7 +1843,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 											if ( preg_match_all("/<img .*?src=\"([^\"]+)\"/is", $content, $matches) ) {
 												if ( ! empty($matches[1]) ) {
 													// remove size suffix.
-													$guid = preg_replace("/\-[0-9]+x[0-9]+(\.[\w]+)$/s", "$1", $matches[1][0]);
+													$guid = preg_replace("/\-[0-9]+x[0-9]+(\.[\w]+)$/s", '$1', $matches[1][0]);
 													global $wpdb;
 												    $query = "SELECT ID FROM $wpdb->posts WHERE guid = '" . $guid . "' AND post_type = 'attachment'";
 													$sql = $wpdb->get_col($query);
@@ -1849,29 +1954,33 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 
 		public function print_post_schema( $itemtype = 'Article' ) {
 			$res = '';
-			switch ( $itemtype ) {
-				case 'Article':
-					$image = $this->get_thumbnail_context(get_the_ID(), 'url', 'medium', '', array( 'custom_logo' => false, 'search_logo' => false ));
-					$logo = $this->get_custom_logo();
-					if ( empty($logo) && ! empty($image) ) {
-						$logo = $image;
-					}
-					$res .= '<meta itemprop="headline" content="' . esc_attr(substr(get_the_title(), 0, 110)) . '" />' . "\n";
-					$res .= '<meta itemprop="author" content="' . esc_attr(get_the_author()) . '" />' . "\n";
-					if ( ! empty($image) ) {
-						$res .= '<meta itemprop="image" content="' . esc_url($image) . '" />' . "\n";
-					}
-					$res .= '<span itemprop="publisher" itemscope itemtype="' . set_url_scheme('http://schema.org/Organization') . '" class="none">' . "\n";
-					$res .= '<meta itemprop="name" content="' . esc_attr(get_bloginfo('name')) . '" />' . "\n";
-					if ( ! empty($logo) ) {
-						$res .= '<meta itemprop="logo" content="' . esc_url($logo) . '" />' . "\n";
-					}
-					$res .= '</span>' . "\n";
-					$res .= $this->get_post_schema_dates();
-					break;
+			// only if there is content.
+			$content = get_the_content('', false, get_the_ID());
+			if ( ! empty_notzero(trim(strip_shortcodes($content))) ) {
+				switch ( $itemtype ) {
+					case 'Article':
+						$image = $this->get_thumbnail_context(get_the_ID(), 'url', 'medium', '', array( 'custom_logo' => false, 'search_logo' => false ));
+						$logo = $this->get_custom_logo();
+						if ( empty($logo) && ! empty($image) ) {
+							$logo = $image;
+						}
+						$res .= '<meta itemprop="headline" content="' . esc_attr(substr(get_the_title(), 0, 110)) . '" />' . "\n";
+						$res .= '<meta itemprop="author" content="' . esc_attr(get_the_author()) . '" />' . "\n";
+						if ( ! empty($image) ) {
+							$res .= '<meta itemprop="image" content="' . esc_url($image) . '" />' . "\n";
+						}
+						$res .= '<span itemprop="publisher" itemscope itemtype="' . set_url_scheme('http://schema.org/Organization') . '" class="none">' . "\n";
+						$res .= '<meta itemprop="name" content="' . esc_attr(get_bloginfo('name')) . '" />' . "\n";
+						if ( ! empty($logo) ) {
+							$res .= '<meta itemprop="logo" content="' . esc_url($logo) . '" />' . "\n";
+						}
+						$res .= '</span>' . "\n";
+						$res .= $this->get_post_schema_dates();
+						break;
 
-				default:
-					break;
+					default:
+						break;
+				}
 			}
 			echo apply_filters(static::$prefix . '_print_post_schema', $res, $itemtype);
 		}

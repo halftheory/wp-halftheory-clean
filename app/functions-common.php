@@ -85,6 +85,16 @@ if ( ! function_exists('array_value_unset') ) {
 	}
 }
 
+if ( ! function_exists('in_array_int') ) {
+	function in_array_int( $needle, $haystack = array(), $strict = true ) {
+		$func = function ( $v ) {
+			return (int) $v;
+		};
+		$haystack = array_map($func, make_array($haystack));
+		return in_array( (int) $needle, $haystack, $strict);
+	}
+}
+
 if ( ! function_exists('is_user_logged_in_cookie') ) {
 	function is_user_logged_in_cookie() {
 		if ( function_exists('is_user_logged_in') ) {
@@ -138,10 +148,10 @@ if ( ! function_exists('get_current_uri') ) {
 		}
 		if ( ! $keep_query ) {
 			$remove = array();
-			if ( $str = parse_url($res, PHP_URL_QUERY) ) {
+			if ( $str = wp_parse_url($res, PHP_URL_QUERY) ) {
 				$remove[] = '?' . $str;
 			}
-			if ( $str = parse_url($res, PHP_URL_FRAGMENT) ) {
+			if ( $str = wp_parse_url($res, PHP_URL_FRAGMENT) ) {
 				$remove[] = '#' . $str;
 			}
 			$res = str_replace($remove, '', $res);
@@ -367,9 +377,29 @@ if ( ! function_exists('url_exists') ) {
 		if ( empty($url) ) {
 			return false;
 		}
-		$url_check = @get_headers($url);
-		if ( ! is_array($url_check) || strpos($url_check[0], '404') !== false ) {
+		$arr = @get_headers($url);
+		if ( $arr === false || ! is_array($arr) ) {
 			return false;
+		}
+		// array could be indexed or associative.
+		reset($arr);
+		if ( strpos(current($arr), '404 Not Found') !== false ) {
+			return false;
+		} elseif ( strpos(current($arr), '301 Moved Permanently') !== false ) {
+			// maybe 404 is hiding in next header.
+			$http_count = 0;
+			$max = 2;
+			foreach ( $arr as $value ) {
+				if ( strpos($value, 'HTTP/') === 0 ) {
+					$http_count++;
+					if ( $http_count > $max ) {
+						break;
+					}
+					if ( strpos($value, '404 Not Found') !== false ) {
+						return false;
+					}
+				}
+			}
 		}
 		return true;
 	}
@@ -382,13 +412,13 @@ if ( ! function_exists('get_urls') ) {
 		}
 		$urls = array();
 		// Find URLs on their own line.
-		if ( preg_match_all('|^(\s*)(https?://[^\s<>"]+)(\s*)$|im', $content, $matches) ) {
+		if ( preg_match_all('|^(\s*)(https?://[^\s<>"\']+)(\s*)$|im', $content, $matches) ) {
 			if ( $matches[2] ) {
 				$urls = array_merge($urls, $matches[2]);
 			}
 		}
 		// Find URLs in their own paragraph.
-		if ( preg_match_all('|(<p(?: [^>]*)?>\s*)(https?://[^\s<>"]+)(\s*<\/p>)|i', $content, $matches) ) {
+		if ( preg_match_all('|(<p(?: [^>]*)?>\s*)(https?://[^\s<>"\']+)(\s*<\/p>)|i', $content, $matches) ) {
 			if ( $matches[2] ) {
 				$urls = array_merge($urls, $matches[2]);
 			}
@@ -653,7 +683,7 @@ if ( ! function_exists('get_the_excerpt_fallback') ) {
 			if ( ! empty($arr) ) {
 				$func_striptax = function ( $str = '' ) {
 					$str = preg_replace("/^###[^#]*###/i", '', $str);
-					if ( in_array($str, array( 'Uncategorized', 'uncategorized', 'Blog', 'blog' ), true) ) {
+					if ( is_title_bad($str, array( 'Blog', 'blog' )) ) {
 						return '';
 					}
 					return $str;
@@ -892,7 +922,7 @@ if ( ! function_exists('trim_excess_space') ) {
 
 		if ( strpos($str, '</') !== false ) {
 			// no space before closing tags.
-			$str = preg_replace("/[\t\n\r ]*(<\/[^>]+>)/s", "$1", $str);
+			$str = preg_replace("/[\t\n\r ]*(<\/[^>]+>)/s", '$1', $str);
 		}
 		if ( strpos($str, '<br') !== false ) {
 			// no br at start/end.
@@ -900,11 +930,29 @@ if ( ! function_exists('trim_excess_space') ) {
 			$str = preg_replace("/<br[\/ ]*>$/s", '', $str);
 		}
 
-		$str = preg_replace("/[\t ]*(\n|\r)[\t ]*/s", "$1", $str);
-		$str = preg_replace("/(\n\r){3,}/s", "$1$1", $str);
+		$str = preg_replace("/[\t ]*(\n|\r)[\t ]*/s", '$1', $str);
+		$str = preg_replace("/(\n\r){3,}/s", '$1$1', $str);
 		$str = preg_replace("/[\n]{3,}/s", "\n\n", $str);
 		$str = preg_replace("/[ ]{2,}/s", ' ', $str);
 		return trim($str);
+	}
+}
+
+if ( ! function_exists('strip_single_tag') ) {
+	function strip_single_tag( $str = '', $tag = '' ) {
+        if ( empty($tag) ) {
+            return $str;
+        }
+        if ( strpos($str, '<' . $tag) === false ) {
+            return $str;
+        }
+        // has closing tag.
+        $str = preg_replace("/[\s]*<$tag [^>]*>.*?<\/[ ]*$tag>[\s]*/is", '', $str);
+        $str = preg_replace("/[\s]*<$tag>.*?<\/[ ]*$tag>[\s]*/is", '', $str);
+        // no closing tag.
+        $str = preg_replace("/[\s]*<$tag [^>]+>[\s]*/is", '', $str);
+        $str = preg_replace("/[\s]*<" . $tag . "[ \/]*>[\s]*/is", '', $str);
+        return $str;
 	}
 }
 
@@ -980,11 +1028,14 @@ if ( ! function_exists('strip_tags_attr') ) {
 		}
 		// script/style tags - special case - remove all contents.
 		$strip_all = array( 'script', 'style' );
-		foreach ( $strip_all as $value ) {
-			if ( ! array_key_exists($value, $allowable_tags_attr) ) {
-				$str = preg_replace("/<" . $value . "[^>]*>.*?<\/" . $value . ">/is", '', $str);
+        foreach ( $strip_all as $tag ) {
+			if ( array_key_exists($tag, $allowable_tags_attr) ) {
+                continue;
 			}
-		}
+			if ( function_exists('strip_single_tag') ) {
+				$str = strip_single_tag($str, $tag);
+			}
+        }
 		if ( empty($allowable_tags_attr) ) {
 			return strip_tags($str);
 		}
@@ -1166,7 +1217,7 @@ if ( ! function_exists('get_excerpt') ) {
 		}
 		// add a space for lines if needed.
 		if ( $args['single_line'] && strpos($text, '<') !== false ) {
-			$text = preg_replace("/(<p>|<p [^>]*>|<\/p>|<br[\/ ]*>)/is", "$1 ", $text);
+			$text = preg_replace("/(<p>|<p [^>]*>|<\/p>|<br[\/ ]*>)/is", '$1 ', $text);
 		}
 		// remove what we don't need.
 		if ( function_exists('excerpt_remove_blocks') ) {
@@ -1180,11 +1231,14 @@ if ( ! function_exists('get_excerpt') ) {
 		if ( ! empty($args['allowable_tags']) && $args['plaintext'] === false ) {
 			// script/style tags - special case - remove all contents.
 			$strip_all = array( 'script', 'style' );
-			foreach ( $strip_all as $value ) {
-				if ( ! array_key_exists($value, $args['allowable_tags']) ) {
-					$text = preg_replace("/<" . $value . "[^>]*>.*?<\/" . $value . ">/is", '', $text);
+	        foreach ( $strip_all as $tag ) {
+				if ( array_key_exists($tag, $args['allowable_tags']) ) {
+	                continue;
 				}
-			}
+				if ( function_exists('strip_single_tag') ) {
+					$text = strip_single_tag($text, $tag);
+				}
+	        }
 			$args['allowable_tags'] = '<' . implode('><', (array) $args['allowable_tags']) . '>';
 			$text = strip_tags($text, $args['allowable_tags']);
 		} else {
@@ -1222,7 +1276,7 @@ if ( ! function_exists('get_excerpt') ) {
         $no_repeat = array( "&lt;", "&gt;", "&amp;", "&ndash;", "&bull;", "&sect;", "&hearts;", "&hellip;", "...", "++", "--", "~~", "##", "**", "==", "__", "_ ", "//" );
 		foreach ( $no_repeat as $value ) {
 			if ( strpos($text, $value) !== false ) {
-				$text = preg_replace("/(" . preg_quote($value, '/') . "[\s]*){2,}/s", "$1", $text);
+				$text = preg_replace("/(" . preg_quote($value, '/') . "[\s]*){2,}/s", '$1', $text);
 			}
 		}
 		// no emojis.
@@ -1331,7 +1385,7 @@ if ( ! function_exists('get_excerpt') ) {
 			// check if we cut in the middle of a tag.
 			if ( ! empty($args['allowable_tags']) && $args['plaintext'] === false ) {
 				$tags = trim( str_replace('><', '|', $args['allowable_tags']), '><');
-				$text = preg_replace("/^(.+)<($tags) [^>]+$/is", "$1", $text);
+				$text = preg_replace("/^(.+)<($tags) [^>]+$/is", '$1', $text);
 				if ( function_exists('force_balance_tags') ) {
 					$text = force_balance_tags($text);
 				}
@@ -1390,8 +1444,8 @@ if ( ! function_exists('get_site_logo_url_from_site_icon') ) {
 		$url = get_site_icon_url($size_icon, '', $blog_id);
 		if ( strpos($url, 'cropped-') !== false ) {
 			$names = array(
-				preg_replace("/^.*?cropped-(.*)$/i", "$1", $url),
-				preg_replace("/^.*?cropped-([^\.]*).*$/i", "$1", $url),
+				preg_replace("/^.*?cropped-(.*)$/i", '$1', $url),
+				preg_replace("/^.*?cropped-([^\.]*).*$/i", '$1', $url),
 			);
 			$names = array_merge($names, array_map('sanitize_title', $names) );
 			$names = array_unique($names);
@@ -1590,7 +1644,7 @@ if ( ! function_exists('get_oembed_providers_hosts') ) {
 		}
 		$res = $oembed->providers;
 		$func = function ( $val ) {
-			return parse_url($val[0], PHP_URL_HOST) . parse_url($val[0], PHP_URL_PATH);
+			return wp_parse_url($val[0], PHP_URL_HOST) . wp_parse_url($val[0], PHP_URL_PATH);
 		};
 		$res = array_map($func, $res);
 		$res = array_unique($res);
@@ -1652,3 +1706,100 @@ if ( ! function_exists('switch_from_native_blog') ) {
 		}
 	}
 }
+
+if ( ! function_exists('get_nav_menu_items_by_location') ) {
+	function get_nav_menu_items_by_location( $location = '', $args = array() ) {
+		$locations = get_nav_menu_locations();
+		if ( empty($locations) ) {
+			return false;
+		}
+		// if no location, use the first menu.
+		if ( empty($location) ) {
+			$location = key($locations);
+		}
+		$obj = wp_get_nav_menu_object($locations[ $location ]);
+		if ( ! $obj ) {
+			return false;
+		}
+		return wp_get_nav_menu_items($obj->name, $args);
+	}
+}
+
+if ( ! function_exists('has_post_video') ) {
+	function has_post_video( $post = null ) {
+		$post = get_post($post);
+		if ( ! $post || ! is_object($post) ) {
+			return false;
+		}
+		if ( $urls = get_urls($post->post_content, null) ) {
+			$providers = get_oembed_providers_hosts('video');
+			$oembed = _wp_oembed_get_object();
+			foreach ( $urls as $url ) {
+				foreach ( $providers as $provider ) {
+					if ( strpos($url, $provider) !== false ) {
+						if ( $oembed->get_data($url, array( 'discover' => false )) ) {
+							return $url;
+						}
+					}
+				}
+			}
+		}
+		return false;
+	}
+}
+
+if ( ! function_exists('get_post_type_archive_title') ) {
+	function get_post_type_archive_title( $post_type = null ) {
+		// a more flexible version of this: https://developer.wordpress.org/reference/functions/post_type_archive_title/
+		if ( empty($post_type) ) {
+			$post_type = get_post_type();
+		}
+		$title = '';
+		$post_type_obj = get_post_type_object($post_type);
+		if ( ! $post_type_obj ) {
+        	return $title;
+    	}
+    	$title = $post_type_obj->labels->name;
+    	// try a page corresponding to the archive link.
+		if ( $link = get_post_type_archive_link($post_type) ) {
+			if ( $link !== get_home_url() ) {
+				$switched = switch_to_native_blog();
+				if ( $page = get_page_by_path(get_url_path($link)) ) {
+					$title = get_the_title($page);
+				}
+				switch_from_native_blog($switched);
+			}
+		}
+    	return apply_filters('post_type_archive_title', $title, $post_type);
+	}
+}
+
+if ( ! function_exists('is_title_bad') ) {
+	function is_title_bad( $str = '', $bad_titles = array() ) {
+		$arr = array_merge(array( '', 'Uncategorized', 'uncategorized', 'Uncategorised', 'uncategorised' ), make_array($bad_titles));
+		return in_array(trim($str), $arr, true);
+	}
+}
+
+if ( ! function_exists('get_default_category_term') ) {
+	function get_default_category_term( $field = null, $check_field = false ) {
+		$res = false;
+		$default_category = get_option('default_category');
+		if ( ! empty($default_category) ) {
+			$term = get_term( (int) $default_category, 'category');
+			if ( ! empty($term) && ! is_wp_error($term) && is_object($term) ) {
+				if ( empty($field) ) {
+					$res = $term;
+				} elseif ( isset($term->$field) ) {
+					if ( $check_field ) {
+						$res = is_title_bad($term->$field) ? false : $term->$field;
+					} else {
+						$res = $term->$field;
+					}
+				}
+			}
+		}
+		return $res;
+	}
+}
+

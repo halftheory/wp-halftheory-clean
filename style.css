@@ -27,7 +27,7 @@ u, .underline { text-decoration: underline; }
 
 del, .strikethrough { text-decoration: line-through; }
 
-small, .small { font-size: 12.8px; font-size: 0.8rem; }
+small, .small { font-size: 14px; font-size: 0.85rem; }
 
 .none { display: none; }
 
@@ -53,6 +53,8 @@ small, .small { font-size: 12.8px; font-size: 0.8rem; }
 
 a:focus { outline: 0; }
 
-.clearfix:before, .clearfix:after { display: table; content: " "; table-layout: fixed; }
+.clearfix:before, .clearfix:after { content: ""; display: table; table-layout: fixed; }
 
 .clearfix:after { clear: both; }
+
+button.single-line, .single-line.button { display: inline-block; }

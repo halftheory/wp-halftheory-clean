@@ -231,7 +231,7 @@ if ( ! class_exists('Halftheory_Helper_Admin', false) ) :
 						continue;
 			        }
 					$menu_new[ $i ] = $value;
-					// submenus
+					// submenus.
 					if ( ! $has_submenu ) {
 						continue;
 					} elseif ( empty($this->admin_menu_include[ $key ]) && isset($GLOBALS['submenu'][ $value[2] ]) ) {
@@ -285,7 +285,7 @@ if ( ! class_exists('Halftheory_Helper_Admin', false) ) :
 			        	continue;
 			        }
 			        if ( empty($this->admin_menu_exclude[ $key ]) || $this->admin_menu_exclude[ $key ] === '*' ) {
-				        // remove all
+				        // remove all.
 						remove_menu_page($value[2]);
 						if ( ! $has_submenu ) {
 							continue;
@@ -295,7 +295,7 @@ if ( ! class_exists('Halftheory_Helper_Admin', false) ) :
 							}
 						}
 					} else {
-				        // remove some
+				        // remove some.
 						$this->admin_menu_exclude[ $key ] = make_array($this->admin_menu_exclude[ $key ]);
 						if ( ! $has_submenu ) {
 							continue;
@@ -385,7 +385,7 @@ if ( ! class_exists('Halftheory_Helper_Admin', false) ) :
 							if ( $item->object !== 'page' ) {
 								continue;
 							}
-							if ( in_array($item->object_id, $page_structure_flat, true) ) {
+							if ( in_array_int($item->object_id, $page_structure_flat) ) {
 								continue;
 							}
 							$title = $item->post_title;
@@ -438,7 +438,7 @@ if ( ! class_exists('Halftheory_Helper_Admin', false) ) :
 	        );
 	        if ( ! empty($posts) && ! is_wp_error($posts) ) {
 	        	foreach ( $posts as $item ) {
-					if ( in_array($item->ID, $page_structure_flat, true) ) {
+					if ( in_array_int($item->ID, $page_structure_flat) ) {
 						continue;
 					}
 	        		$arr = array( 'ID' => $item->ID, 'title' => $item->post_title, 'children' => array() );

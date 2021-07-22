@@ -1,16 +1,7 @@
 // http://sass-lang.com/documentation/Sass/Script/Functions.html#unitless-instance_method
 // http://sass-lang.com/guide
 
-// variables
-
-$default-font-size: 16px;
-$default-line-height: 1.5rem;
-
 // mobile
-
-$desktop-width: 1168px;
-$tablet-width: 768px;
-$phone-width: 480px;
 
 @mixin desktop {
 	@media only screen and (min-width: #{$tablet-width + 1px}) {
@@ -48,9 +39,7 @@ $phone-width: 480px;
 	}
 	@return $selector;
 }
-
 $iframe-video: iframes("youtube.com/","vimeo.com/","dailymotion.com/","hulu.com/","collegehumor.com/","facebook.com/plugins/video","screencast.com/","wordpress.tv/","public-api.wordpress.com/");
-
 $iframe-audio: iframes("soundcloud.com/","spotify.com/","mixcloud.com/");
 
 // functions
@@ -64,7 +53,7 @@ $iframe-audio: iframes("soundcloud.com/","spotify.com/","mixcloud.com/");
 
 @function make-time($value, $unit: 's') {
 	@if type-of($value) == 'number' and not index('s' 'ms', unit($value)) {
-		$value: #{strip-unit($value)}#{$unit};
+		$value: #{round(strip-unit($value))}#{$unit};
 	}
 	@return $value;
 }
@@ -77,12 +66,11 @@ $iframe-audio: iframes("soundcloud.com/","spotify.com/","mixcloud.com/");
 	$max: length($values);
 	$pxValues: '';
 	$remValues: '';
-
 	@for $i from 1 through $max {
 		$value: nth($values, $i);
 		@if type-of($value) == 'number' {
 		    $value: strip-unit($value);
-		    $pxValues: #{$pxValues + $value * strip-unit($default-font-size)}px;
+		    $pxValues: #{$pxValues + round($value * strip-unit($default-font-size))}px;
 		    $remValues: #{$remValues + $value}rem;
 		}
 		@else {
@@ -94,22 +82,20 @@ $iframe-audio: iframes("soundcloud.com/","spotify.com/","mixcloud.com/");
 			$pxValues: #{$pxValues + " "};
 			$remValues: #{$remValues + " "};
 	    }
-	} 
-
-	#{$property}: $pxValues; 
-	#{$property}: $remValues; 
+	}
+	#{$property}: $pxValues;
+	#{$property}: $remValues;
 }
 
 @mixin vw($property, $values...) {
 	$max: length($values);
 	$pxValues: '';
 	$remValues: '';
-
 	@for $i from 1 through $max {
 		$value: nth($values, $i);
 		@if type-of($value) == 'number' {
 		    $value: strip-unit($value);
-		    $pxValues: #{$pxValues + $value * strip-unit($default-font-size) * 0.6}px;
+		    $pxValues: #{$pxValues + round($value * strip-unit($default-font-size) * 0.6)}px;
 		    $remValues: #{$remValues + $value}vw;
 		}
 		@else {
@@ -121,10 +107,9 @@ $iframe-audio: iframes("soundcloud.com/","spotify.com/","mixcloud.com/");
 			$pxValues: #{$pxValues + " "};
 			$remValues: #{$remValues + " "};
 	    }
-	} 
-
-	#{$property}: $pxValues; 
-	#{$property}: $remValues; 
+	}
+	#{$property}: $pxValues;
+	#{$property}: $remValues;
 }
 
 @mixin link($selector: a) {
@@ -155,8 +140,8 @@ $iframe-audio: iframes("soundcloud.com/","spotify.com/","mixcloud.com/");
 @mixin clearfix {
 	&:before,
 	&:after {
+	  content: "";
 	  display: table;
-	  content: " ";
 	  table-layout: fixed;
 	}
 	&:after {
@@ -166,42 +151,61 @@ $iframe-audio: iframes("soundcloud.com/","spotify.com/","mixcloud.com/");
 }
 
 @mixin hyphens($value: auto) {
-	@if $value == none {
-		-webkit-hyphens: none;
-		-moz-hyphens: none;
-		-ms-hyphens: none;
-		hyphens: none;
-	}
-	@else {
-		-webkit-hyphens: auto;
-		-moz-hyphens: auto;
-		-ms-hyphens: auto;
-		hyphens: auto;
+	-webkit-hyphens: $value;
+	-moz-hyphens: $value;
+	-ms-hyphens: $value;
+	hyphens: $value;
+	@if $value == auto {
 		word-break: break-word;
 		word-wrap: break-word;
+	}
+}
+
+@mixin empty {
+	&:-moz-only-whitespace { // only works on its own line.
+		@content;
+	}
+	&:empty,
+	&:blank {
+		@content;
+	}
+}
+
+@mixin aspect-ratio($width: 16, $height: 9, $max-width: 100vw, $print-height: true, $print-aspect-ratio: true) {
+	$width: round($width);
+	$height: round($height);
+	@if $print-height {
+		$ratio: $height/$width;
+		height: calc(#{$max-width} * #{$ratio});
+	}
+	@if $print-aspect-ratio {
+		@supports (aspect-ratio: #{$width}/#{$height}) {
+			aspect-ratio: #{$width}/#{$height};
+			height: auto !important;
+			max-height: none;
+		}
 	}
 }
 
 // browser vendor prefixes
 
 @mixin vendor-prefix($property, $value) {
-  -webkit-#{$property}: #{$value};
-  -ms-#{$property}: #{$value};
-  -moz-#{$property}: #{$value};
-  -o-#{$property}: #{$value};
-  #{$property}: #{$value};
+	-webkit-#{$property}: #{$value};
+	-ms-#{$property}: #{$value};
+	-moz-#{$property}: #{$value};
+	-o-#{$property}: #{$value};
+	#{$property}: #{$value};
 }
 
 @mixin vendor-prefix-rem($property, $values...) {
 	$max: length($values);
 	$pxValues: '';
 	$remValues: '';
-
 	@for $i from 1 through $max {
 		$value: nth($values, $i);
 		@if type-of($value) == 'number' {
 		    $value: strip-unit($value);
-		    $pxValues: #{$pxValues + $value * strip-unit($default-font-size)}px;
+		    $pxValues: #{$pxValues + round($value * strip-unit($default-font-size))}px;
 		    $remValues: #{$remValues + $value}rem;
 		}
 		@else {
@@ -213,8 +217,7 @@ $iframe-audio: iframes("soundcloud.com/","spotify.com/","mixcloud.com/");
 			$pxValues: #{$pxValues + " "};
 			$remValues: #{$remValues + " "};
 	    }
-	} 
-
+	}
 	@include vendor-prefix(#{$property}, $pxValues);
 	@include vendor-prefix(#{$property}, $remValues);
 }
@@ -260,20 +263,37 @@ $iframe-audio: iframes("soundcloud.com/","spotify.com/","mixcloud.com/");
 }
 
 // flex - https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Flexible_Box_Layout/Mixins
-
-@mixin display-flex {
-	display: -webkit-box;
-	display: -moz-box;
-	display: -webkit-flex;
-	display: -ms-flexbox;
-	display: flex;
+@mixin display-flex($important: '') {
+    @if $important != '' {
+		display: -webkit-box $important;
+		display: -moz-box $important;
+		display: -webkit-flex $important;
+		display: -ms-flexbox $important;
+		display: flex $important;
+    }
+    @else {
+		display: -webkit-box;
+		display: -moz-box;
+		display: -webkit-flex;
+		display: -ms-flexbox;
+		display: flex;
+    }
 }
-@mixin display-inline-flex {
-	display: -webkit-inline-box;
-	display: -moz-inline-box;
-	display: -webkit-inline-flex;
-	display: -ms-inline-flexbox;
-	display: inline-flex;
+@mixin display-inline-flex($important: '') {
+    @if $important != '' {
+		display: -webkit-inline-box $important;
+		display: -moz-inline-box $important;
+		display: -webkit-inline-flex $important;
+		display: -ms-inline-flexbox $important;
+		display: inline-flex $important;
+    }
+    @else {
+		display: -webkit-inline-box;
+		display: -moz-inline-box;
+		display: -webkit-inline-flex;
+		display: -ms-inline-flexbox;
+		display: inline-flex;
+    }
 }
 @mixin flex-direction($value: row) {
 	@if $value == row-reverse {
@@ -433,11 +453,10 @@ $iframe-audio: iframes("soundcloud.com/","spotify.com/","mixcloud.com/");
 // menu
 
 @mixin menu-ul-dropdown($selector-menu-item: '.menu-item', $selector-menu-item-has-children: '.menu-item-has-children', $selector-sub-menu: '.sub-menu') {
-	$menu_arrow_down: '\f140';
-	$menu_arrow_left: '\f141';
-	$menu_arrow_right: '\f139';
-	$menu_arrow_up: '\f142';
-
+	$menu_arrow_down: '\f140' !default;
+	$menu_arrow_left: '\f141' !default;
+	$menu_arrow_right: '\f139' !default;
+	$menu_arrow_up: '\f142' !default;
 	list-style: none;
 	padding: 0;
 	margin: 0;
@@ -455,8 +474,8 @@ $iframe-audio: iframes("soundcloud.com/","spotify.com/","mixcloud.com/");
 			-webkit-font-smoothing: antialiased;
 			-moz-osx-font-smoothing: grayscale;
 			color: inherit;
-			position: relative;
 			background: transparent;
+			position: relative;
 			height: auto;
 			width: auto;
 			right: auto;
@@ -477,7 +496,7 @@ $iframe-audio: iframes("soundcloud.com/","spotify.com/","mixcloud.com/");
 			@include hyphens;
 			> li#{$selector-menu-item} {
 				> a {
-					display: block;					
+					display: block;
 				}
 			}
 		}

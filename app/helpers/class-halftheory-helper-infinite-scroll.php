@@ -86,9 +86,19 @@ if ( ! class_exists('Halftheory_Helper_Infinite_Scroll', false) ) :
 				}
 			}
 
+			if ( is_multisite() && isset($_POST['blog_id']) ) {
+				switch_to_blog($_POST['blog_id']);
+			}
+			if ( $hp = Halftheory_Clean::get_instance()->get_helper_plugin() ) {
+				$args = $hp->check_wp_query_args($args);
+			}
+
 			$posts = query_posts($args);
 			if ( empty($posts) ) {
 				wp_reset_query();
+				if ( is_multisite() && isset($_POST['blog_id']) ) {
+					restore_current_blog();
+				}
 				wp_die();
 			}
 			// overwrite wp_query conditions from the main query.
@@ -102,10 +112,10 @@ if ( ! class_exists('Halftheory_Helper_Infinite_Scroll', false) ) :
 			}
 			$template_default = false;
 			if ( isset($_POST['template']) ) {
-				if ( strpos($_POST['template'], ABSPATH) === false ) {
-					$_POST['template'] = trailingslashit(get_stylesheet_directory()) . ltrim($_POST['template'], '/\\');
-				}
 				$template_default = $_POST['template'];
+				if ( strpos($template_default, ABSPATH) === false ) {
+					$template_default = locate_template(array( ltrim($template_default, '/\\') ), false);
+				}
 			}
 			// Start the loop.
 			while ( have_posts() ) {
@@ -125,6 +135,9 @@ if ( ! class_exists('Halftheory_Helper_Infinite_Scroll', false) ) :
 				}
 			} // End the loop.
 			wp_reset_query();
+			if ( is_multisite() && isset($_POST['blog_id']) ) {
+				restore_current_blog();
+			}
 			wp_die();
 		}
 
@@ -134,7 +147,7 @@ if ( ! class_exists('Halftheory_Helper_Infinite_Scroll', false) ) :
 
 		/* functions */
 
-		public function setup_query( $query = null ) {
+		public function setup_query( $query = null, $blog_id = null ) {
 			if ( is_null($query) && ! is_object($this->query) ) {
 				global $wp_query;
 				$query = $wp_query;
@@ -142,6 +155,11 @@ if ( ! class_exists('Halftheory_Helper_Infinite_Scroll', false) ) :
 			if ( is_object($query) && is_a($query, 'WP_Query') ) {
 				if ( $query->max_num_pages > 1 ) {
 					$this->query = $query;
+					if ( ! is_null($blog_id) ) {
+						$this->query_blog_id = $blog_id;
+					} elseif ( is_multisite() && ms_is_switched() ) {
+						$this->query_blog_id = get_current_blog_id();
+					}
 				}
 			}
 		}
@@ -202,6 +220,9 @@ if ( ! class_exists('Halftheory_Helper_Infinite_Scroll', false) ) :
 			$data = array(
 				'action' => $this->ajax_action,
 			);
+			if ( is_multisite() && isset($this->query_blog_id) ) {
+				$data['blog_id'] = $this->query_blog_id;
+			}
 
 			// get current query
 			if ( is_array($this->query->query) ) {
@@ -218,7 +239,7 @@ if ( ! class_exists('Halftheory_Helper_Infinite_Scroll', false) ) :
 					$data['query'] = $arr;
 				}
 			}
-			// fallback
+			// fallback.
 			if ( ! isset($data['query']) ) {
 				if ( $this->query->is_author() ) {
 					$obj = $this->query->get_queried_object();

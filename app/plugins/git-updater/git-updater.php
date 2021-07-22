@@ -2,20 +2,20 @@
 // Exit if accessed directly.
 defined('ABSPATH') || exit;
 
-$theme_plugin = 'Halftheory_Clean_Plugin_GitHub_Updater';
+$theme_plugin = 'Halftheory_Clean_Plugin_Git_Updater';
 
-if ( ! class_exists('Halftheory_Clean_Plugin_GitHub_Updater', false) ) :
-    final class Halftheory_Clean_Plugin_GitHub_Updater {
+if ( ! class_exists('Halftheory_Clean_Plugin_Git_Updater', false) ) :
+    final class Halftheory_Clean_Plugin_Git_Updater {
 
         private $plugin_prefix = 'wp-halftheory';
 
-    	public function __construct() {
+        public function __construct() {
             if ( is_admin() && current_user_can('manage_options') ) {
                 add_action('init', array( $this, 'init' ), 90);
             }
-    	}
+        }
 
-    	/* actions */
+        /* actions */
 
         public function init() {
             // __construct is too early.

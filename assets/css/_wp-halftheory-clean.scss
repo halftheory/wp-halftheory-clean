@@ -1,5 +1,5 @@
-@charset "UTF-8";
-@import '_style-master.scss';
+@import '01-variables';
+@import '02-mixins';
 
 // elements
 
@@ -34,8 +34,7 @@ body {
 }
 
 // classes
-
-@import '_style-classes.scss';
+@import '03-classes';
 
 b,
 strong,
@@ -85,6 +84,10 @@ a:focus {
 }
 .single-line {
 	@extend %single-line;
+}
+button.single-line,
+.single-line.button {
+	display: inline-block;
 }
 .float-left {
 	@extend %float-left;
