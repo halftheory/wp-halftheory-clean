@@ -18,7 +18,7 @@
 
 		<header id="header" class="clear">
 
-			<div id="logo" class="clear">
+			<div id="logo">
 				<div class="float-left">
 					<h1 class="site-title"><a href="<?php echo esc_url( home_url('/') ); ?>" rel="home"><?php bloginfo('name'); ?></a></h1>
 				</div>
@@ -28,7 +28,7 @@
 			</div>
 
 			<?php if ( has_nav_menu('primary-menu') ) : ?>
-				<nav id="navigation" role="navigation" class="clear" aria-label="<?php esc_attr_e('Primary Menu'); ?>">
+				<nav id="navigation" role="navigation" aria-label="<?php esc_attr_e('Primary Menu'); ?>">
 				<?php
 				wp_nav_menu(
 					array(

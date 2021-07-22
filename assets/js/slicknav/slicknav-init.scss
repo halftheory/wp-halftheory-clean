@@ -1,5 +1,6 @@
 @charset "UTF-8";
-@import '../../css/_style-master.scss';
+@import '../../css/01-variables';
+@import '../../css/02-mixins';
 
 // mobile
 
@@ -34,7 +35,7 @@
 @include tablet {
 	header #menu, header #logo {
 		display:none;
-	}	
+	}
 	.slicknav_menu {
 		display:block;
 	}

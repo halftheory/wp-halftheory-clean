@@ -6,6 +6,9 @@ Available filters:
 {static::$prefix}_uninstall(string $db_prefix, class $instance)
 halftheory_admin_menu_parent(string $name)
 {static::$prefix}_admin_menu_parent(string $name)
+{static::$prefix}_register_post_type(array $args, string $post_type)
+{static::$prefix}_register_taxonomy(array $args, string $taxonomy, array $object_type)
+{static::$prefix}_options_default(array $options)
 */
 
 // Exit if accessed directly.
@@ -178,19 +181,19 @@ if ( ! class_exists('Halftheory_Helper_Plugin', false) ) :
 	 		global $title;
 			?>
 			<div class="wrap">
-			<h2><?php echo $title; ?></h2>
+			<h2><?php echo esc_html($title); ?></h2>
 
 			<?php
 			if ( $plugin->save_menu_page(__FUNCTION__) ) {
 				// save.
 			}
+
+            // Show the form.
+            $options = $plugin->get_options_context('admin_form');
 	 		?>
 
 			<?php $plugin->print_menu_page_tabs(); ?>
 
-			<?php
-            // Show the form.
-			?>
 		    <form id="<?php echo esc_attr($plugin::$prefix); ?>-admin-form" name="<?php echo esc_attr($plugin::$prefix); ?>-admin-form" method="post" action="<?php echo esc_attr($_SERVER['REQUEST_URI']); ?>">
 			<?php
 			// Use nonce for verification.
@@ -239,29 +242,42 @@ if ( ! class_exists('Halftheory_Helper_Plugin', false) ) :
 
 		/* functions */
 
-		public function get_plugin_version() {
-			if ( isset($this->plugin_version) ) {
-				return $this->plugin_version;
+		public function get_plugin_data_field( $plugin_file = null, $field = null ) {
+			if ( empty($plugin_file) || empty($field) ) {
+				return null; // better to return null rather than false - better for wp_enqueue_scripts etc.
 			}
-			if ( ! isset($this->plugin_basename) ) {
-				return null;
+			if ( strpos($plugin_file, WP_PLUGIN_DIR) === false && strpos($plugin_file, WPMU_PLUGIN_DIR) === false ) {
+				$plugin_file = WP_PLUGIN_DIR . '/' . ltrim($plugin_file, '/ ');
 			}
-			$file = WP_PLUGIN_DIR . '/' . $this->plugin_basename;
-			if ( ! file_exists($file) ) {
+			if ( ! file_exists($plugin_file) ) {
 				return null;
 			}
 			if ( ! function_exists('get_plugin_data') && is_readable(ABSPATH . 'wp-admin/includes/plugin.php') ) {
 	        	require_once ABSPATH . 'wp-admin/includes/plugin.php';
 	    	}
-			$plugin_data = get_plugin_data($file);
+			$plugin_data = get_plugin_data($plugin_file);
 			if ( ! is_array($plugin_data) ) {
 				return null;
 			}
-			if ( isset($plugin_data['Version']) ) {
-				$this->plugin_version = $plugin_data['Version'];
-				return $this->plugin_version;
+			if ( ! isset($plugin_data[ $field ]) ) {
+				return null;
 			}
-			return null;
+			return $plugin_data[ $field ];
+		}
+
+		public function get_plugin_version( $plugin_file = null ) {
+			$this_plugin = is_null($plugin_file);
+			if ( $this_plugin ) {
+				if ( property_exists($this, 'plugin_version') ) {
+					return $this->plugin_version;
+				}
+				$plugin_file = isset($this->plugin_basename) ? WP_PLUGIN_DIR . '/' . $this->plugin_basename : __FILE__;
+			}
+			$res = $this->get_plugin_data_field($plugin_file, 'Version');
+			if ( $this_plugin ) {
+				$this->plugin_version = $res;
+			}
+			return $res;
 		}
 
 		public function is_menu_page( $str = null ) {
@@ -388,6 +404,12 @@ if ( ! class_exists('Halftheory_Helper_Plugin', false) ) :
 			return $res;
 		}
 
+		public function get_template_types() {
+			// https://developer.wordpress.org/reference/functions/get_query_template/
+			$types = array( 'index', '404', 'archive', 'author', 'category', 'tag', 'taxonomy', 'date', 'embed', 'home', 'frontpage', 'privacypolicy', 'page', 'paged', 'search', 'single', 'singular', 'attachment' );
+			return $types;
+		}
+
 		public function get_template_tags() {
 			$tag_templates = array(
 				'is_embed'             => 'get_embed_template',
@@ -437,6 +459,7 @@ if ( ! class_exists('Halftheory_Helper_Plugin', false) ) :
 
 		public function add_shortcode_wpautop_control( $shortcode = 'code', $actions = array( 'the_content', 'the_excerpt', 'widget_text_content' ) ) {
 			// see: https://github.com/chiedolabs/shortcode-wpautop-control/blob/master/shortcode-wpautop-control.php
+			// this function should be called by the 'init' action or later.
 			if ( ! shortcode_exists($shortcode) ) {
 				return;
 			}
@@ -446,7 +469,7 @@ if ( ! class_exists('Halftheory_Helper_Plugin', false) ) :
 					return $str;
 				}
 				remove_filter(current_filter(), 'wpautop');
-				$parts_old = preg_split("/" . get_shortcode_regex(array( $shortcode )) . "/is", $str, -1, PREG_SPLIT_NO_EMPTY);
+				$parts_old = preg_split('/' . get_shortcode_regex(array( $shortcode )) . '/is', $str, -1, PREG_SPLIT_NO_EMPTY);
 				$parts_new = array_map('trim', $parts_old);
 				$parts_new = array_map('wpautop', $parts_new);
 				$str = strtr($str, array_combine($parts_old, $parts_new));
@@ -464,9 +487,248 @@ if ( ! class_exists('Halftheory_Helper_Plugin', false) ) :
 					continue;
 				}
 				// usual priority: wpautop (10) do_shortcode (11), so we need to get ahead of both to change them.
-				$priority_before = intval(max((min($priority_do_shortcode - 1, $priority_wpautop - 1)), 0)); // 9?
+				$priority_before = intval( max( ( min( $priority_do_shortcode - 1, $priority_wpautop - 1 ) ), 0) ); // 9?
 				add_filter($action, $func_action, $priority_before);
 			}
+		}
+
+		public function check_wp_query_args( $args = array() ) {
+			// replace common field errors, make arrays where needed.
+            $fields = array(
+                'replace' => array(
+                    'ID' => 'p',
+                    'id' => 'p',
+                    'post_id' => 'p',
+                    'type' => 'post_type',
+                    'post_name' => 'name',
+                    'search' => 's',
+                    'category' => 'category_name',
+                ),
+                'is_array' => array(
+                    'author__in',
+                    'author__not_in',
+                    'category__and',
+                    'category__in',
+                    'category__not_in',
+                    'tag__and',
+                    'tag__in',
+                    'tag__not_in',
+                    'tag_slug__and',
+                    'tag_slug__in',
+                    'post_parent__in',
+                    'post_parent__not_in',
+                    'post__in',
+                    'post__not_in',
+                    'post_name__in',
+                ),
+                'query' => array(
+                	'tax_query',
+                	'meta_query',
+                	'date_query',
+                ),
+            );
+            foreach ( $args as $key => $value ) {
+                if ( isset($fields['replace'][ $key ]) ) {
+                	unset($args[ $key ]);
+                    $key = $fields['replace'][ $key ];
+                    $args[ $key ] = $value;
+                }
+                if ( in_array($key, $fields['is_array'], true) ) {
+                    $args[ $key ] = $this->make_array($value);
+                } elseif ( in_array($key, $fields['query'], true) ) {
+                    $args[ $key ] = $this->make_array($value);
+                	// if no arrays found, nest inside next level array.
+                	$found = false;
+                	foreach ( $args[ $key ] as $v ) {
+                		if ( is_array($v) ) {
+                			$found = true;
+                			break;
+                		}
+                	}
+                	if ( ! $found ) {
+                		$args[ $key ] = array( $args[ $key ] );
+                	}
+                }
+            }
+            // if the blog is switched we may need to add the post_types, taxonomies.
+			if ( is_multisite() && ms_is_switched() ) {
+				$object_type = null;
+				if ( isset($args['post_type']) ) {
+					$object_type = $args['post_type'];
+					$this->register_post_type($args['post_type']);
+				}
+				if ( isset($args['tax_query']) && is_array($args['tax_query']) ) {
+					$arr = array();
+                    foreach ( $args['tax_query'] as $value ) {
+                        if ( ! is_array( $value ) ) {
+                            continue;
+                        }
+                        if ( isset($value['taxonomy']) ) {
+                        	$arr[] = $value['taxonomy'];
+                        }
+                    }
+                    $this->register_taxonomy($arr, $object_type);
+				}
+			}
+			return $args;
+		}
+
+        public function register_post_type( $post_type, $args = null ) {
+        	$res = array();
+        	foreach ( $this->make_array($post_type) as $value ) {
+        		if ( $value === 'any' ) {
+        			$res[ $value ] = false;
+        			continue;
+        		}
+	            $res[ $value ] = post_type_exists($value);
+	            if ( ! $res[ $value ] ) {
+		            if ( is_null($args) ) {
+		            	$plural_name = rtrim($value, 's') . 's';
+		                $post_type_args = array(
+		                    'public' => true,
+		                    'show_ui' => false,
+		                    'show_in_nav_menus' => false,
+		                    'show_in_rest' => false,
+							'has_archive' => true,
+		                    'hierarchical' => true,
+		                    'query_var' => false,
+		                    'rewrite' => array(
+		                    	'slug' => $plural_name,
+		                    ),
+            				'labels' => array(
+								'name' => ucfirst($plural_name),
+								'singular_name' => ucfirst($value),
+							),
+		                );
+		            } else {
+		                $post_type_args = $this->make_array($args);
+		            }
+	                $post_type_args = apply_filters(static::$prefix . '_register_post_type', $post_type_args, $value);
+	                $res[ $value ] = register_post_type($value, $post_type_args);
+	            }
+        	}
+            return $res;
+        }
+
+        public function register_taxonomy( $taxonomy, $object_type = null, $args = null ) {
+        	$res = array();
+			if ( is_null($object_type) ) {
+			    $object_type = get_post_types(array( 'public' => true ), 'names');
+			    global $typenow;
+			    if ( ! empty($typenow) && ! in_array($typenow, $object_type, true) ) {
+			    	$object_type[] = $typenow;
+			    }
+			} else {
+                $object_type = $this->make_array($object_type);
+            }
+        	foreach ( $this->make_array($taxonomy) as $value ) {
+	            $res[ $value ] = taxonomy_exists($value);
+	            if ( ! $res[ $value ] ) {
+		            if ( is_null($args) ) {
+		                $args = array(
+		                    'description' => $value,
+		                    'public' => true,
+		                    'show_ui' => false,
+		                    'show_in_nav_menus' => false,
+		                    'show_in_rest' => false,
+		                    'hierarchical' => true,
+		                    'query_var' => false,
+		                    'rewrite' => false,
+		                );
+		            } else {
+		                $args = $this->make_array($args);
+		            }
+	                $args = apply_filters(static::$prefix . '_register_taxonomy', $args, $value, $object_type);
+	                $res[ $value ] = register_taxonomy($value, $object_type, $args);
+	            }
+	        }
+            return $res;
+        }
+
+        protected function get_options_default() {
+            return apply_filters(static::$prefix . '_options_default',
+            	array(
+                	'active' => false,
+            	)
+            );
+        }
+
+		public function get_options_context( $context = 'db', $key = null, $default = null, $input = array() ) {
+			$options_default = (array) $this->get_options_default();
+			// default handling.
+			if ( is_null($default) ) {
+				if ( ! $this->empty_notzero($key) && array_key_exists($key, $options_default) ) {
+					$default = $options_default[ $key ];
+				} elseif ( $this->empty_notzero($key) ) {
+					$default = array();
+				}
+			}
+
+			// data type checking.
+			$func_data_check = function ( $res, $check = array( 'bool', 'int', 'float', 'array' ) ) use ( $key, $options_default ) {
+				if ( is_array($res) ) {
+					foreach ( $options_default as $k => $v ) {
+						if ( array_key_exists($k, $res) ) {
+							if ( in_array('bool', $check, true) && is_bool($v) && ! is_bool($res[ $k ]) ) {
+								$res[ $k ] = $this->is_true($res[ $k ]);
+							} elseif ( in_array('int', $check, true) && is_int($v) && ! is_int($res[ $k ]) ) {
+								$res[ $k ] = (int) $res[ $k ];
+							} elseif ( in_array('float', $check, true) && is_float($v) && ! is_float($res[ $k ]) ) {
+								$res[ $k ] = (float) $res[ $k ];
+							} elseif ( in_array('array', $check, true) && is_array($v) && ! is_array($res[ $k ]) ) {
+								$res[ $k ] = $this->make_array($res[ $k ]);
+							}
+						}
+					}
+				} elseif ( ! $this->empty_notzero($key) && array_key_exists($key, $options_default) ) {
+					if ( in_array('bool', $check, true) && is_bool($options_default[ $key ]) && ! is_bool($res) ) {
+						$res = $this->is_true($res);
+					} elseif ( in_array('int', $check, true) && is_int($options_default[ $key ]) && ! is_int($res) ) {
+						$res = (int) $res;
+					} elseif ( in_array('float', $check, true) && is_float($options_default[ $key ]) && ! is_float($res) ) {
+						$res = (float) $res;
+					} elseif ( in_array('array', $check, true) && is_array($options_default[ $key ]) && ! is_array($res) ) {
+						$res = $this->make_array($res);
+					}
+				}
+				return $res;
+			};
+
+			$res = $default;
+			switch ( $context ) {
+				case 'db':
+				default:
+					$res = $this->get_option(static::$prefix, $key, $default);
+					$res = $func_data_check($res);
+					break;
+
+				case 'default':
+					$res = $options_default;
+					break;
+
+				case 'input':
+					$res = $func_data_check($input);
+					break;
+
+				case 'admin_form':
+				case 'admin-form':
+					$options_db = $this->get_options_context('db', $key, $default);
+					if ( empty($options_db) ) {
+						$res = $options_default;
+					} else {
+		            	$res = array_merge( array_fill_keys(array_keys($options_default), null), (array) $options_db );
+						$res = $func_data_check($res, array( 'array' ));
+		            }
+					break;
+			}
+
+            if ( ! $this->empty_notzero($key) && is_array($res) && $context !== 'db' ) {
+                if ( array_key_exists($key, $res) ) {
+                    return $res[ $key ];
+                }
+                return $default;
+            }
+			return $res;
 		}
 
 		// options
@@ -484,7 +746,7 @@ if ( ! class_exists('Halftheory_Helper_Plugin', false) ) :
 			}
 			return $name;
 		}
-		public function get_option( $name = '', $key = '', $default = array() ) {
+		public function get_option( $name = '', $key = null, $default = array() ) {
 			$name = $this->get_option_name($name);
 			if ( ! isset($this->options[ $name ]) ) {
 				if ( $this->is_plugin_network() ) {
@@ -509,8 +771,21 @@ if ( ! class_exists('Halftheory_Helper_Plugin', false) ) :
 			} else {
 				$bool = update_option($name, $value);
 			}
+			// cache.
 			if ( $bool !== false ) {
 				$this->options[ $name ] = $value;
+			}
+			// is it false because there were no changes?
+			if ( $bool === false ) {
+				if ( $tmp = $this->get_option($name) ) {
+					if ( is_array($tmp) && is_array($value) ) {
+	                    ksort($tmp);
+	                    ksort($value);
+					}
+					if ( $tmp === $value ) {
+						$bool = true;
+					}
+				}
 			}
 			return $bool;
 		}
@@ -529,7 +804,7 @@ if ( ! class_exists('Halftheory_Helper_Plugin', false) ) :
 		public function delete_option_uninstall( $name = '' ) {
 			$name_single = $this->get_option_name($name, false);
 			global $wpdb;
-			if ( is_multisite() ) {
+			if ( $this->is_plugin_network() ) {
 				$name_network = $this->get_option_name($name, true);
 				$wpdb->query("DELETE FROM $wpdb->sitemeta WHERE meta_key LIKE '" . $name_network . "%'");
 				$sites = get_sites();
@@ -580,6 +855,18 @@ if ( ! class_exists('Halftheory_Helper_Plugin', false) ) :
 			} else {
 				$bool = set_transient($transient, $value, $expiration);
 			}
+			// is it false because there were no changes?
+			if ( $bool === false ) {
+				if ( $tmp = $this->get_transient($transient) ) {
+					if ( is_array($tmp) && is_array($value) ) {
+	                    ksort($tmp);
+	                    ksort($value);
+					}
+					if ( $tmp === $value ) {
+						$bool = true;
+					}
+				}
+			}
 			return $bool;
 		}
 		public function delete_transient( $transient = '' ) {
@@ -594,7 +881,7 @@ if ( ! class_exists('Halftheory_Helper_Plugin', false) ) :
 		public function delete_transient_uninstall( $transient = '' ) {
 			$transient_single = $this->get_transient_name($transient, false);
 			global $wpdb;
-			if ( is_multisite() ) {
+			if ( $this->is_plugin_network() ) {
 				$transient_network = $this->get_transient_name($transient, true);
 				$wpdb->query("DELETE FROM $wpdb->sitemeta WHERE meta_key LIKE '_site_transient_" . $transient_network . "%' OR meta_key LIKE '_site_transient_timeout_" . $transient_network . "%'");
 				$sites = get_sites();
@@ -616,7 +903,7 @@ if ( ! class_exists('Halftheory_Helper_Plugin', false) ) :
 			$name = substr($name, 0, 255);
 			return $name;
 		}
-		public function get_postmeta( $post_id = 0, $name = '', $key = '', $default = array() ) {
+		public function get_postmeta( $post_id = 0, $name = '', $key = null, $default = array() ) {
 			$post_id = (int) $post_id;
 			$name = $this->get_postmeta_name($name);
 			$db_fetch = false;
@@ -665,7 +952,7 @@ if ( ! class_exists('Halftheory_Helper_Plugin', false) ) :
 		public function delete_postmeta_uninstall( $name = '' ) {
 			$name = $this->get_postmeta_name($name);
 			global $wpdb;
-			if ( is_multisite() ) {
+			if ( $this->is_plugin_network() ) {
 				$sites = get_sites();
 				foreach ( $sites as $key => $value ) {
 					switch_to_blog($value->blog_id);
@@ -755,6 +1042,18 @@ if ( ! class_exists('Halftheory_Helper_Plugin', false) ) :
 			return $arr;
 		}
 
+		public function in_array_int( $needle, $haystack = array(), $strict = true ) {
+			if ( function_exists(__FUNCTION__) ) {
+				$func = __FUNCTION__;
+				return $func($needle, $haystack, $strict);
+			}
+			$func = function ( $v ) {
+				return (int) $v;
+			};
+			$haystack = array_map($func, make_array($haystack));
+			return in_array( (int) $needle, $arr, $strict);
+		}
+
 		public function is_front_end() {
 			if ( function_exists(__FUNCTION__) ) {
 				$func = __FUNCTION__;
@@ -786,10 +1085,10 @@ if ( ! class_exists('Halftheory_Helper_Plugin', false) ) :
 			}
 			if ( ! $keep_query ) {
 				$remove = array();
-				if ( $str = parse_url($res, PHP_URL_QUERY) ) {
+				if ( $str = wp_parse_url($res, PHP_URL_QUERY) ) {
 					$remove[] = '?' . $str;
 				}
-				if ( $str = parse_url($res, PHP_URL_FRAGMENT) ) {
+				if ( $str = wp_parse_url($res, PHP_URL_FRAGMENT) ) {
 					$remove[] = '#' . $str;
 				}
 				$res = str_replace($remove, '', $res);

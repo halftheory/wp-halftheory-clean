@@ -9,3 +9,5 @@ Features:
 - Mobile menu (slicknav).
 - Unnecessary meta tags removed.
 - General Wordpress cleanup.
+
+This theme can be manually updated when installed with the [github-updater](https://github.com/afragen/git-updater) plugin.
