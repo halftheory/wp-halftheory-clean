@@ -8,43 +8,39 @@ if ( ! class_exists('Halftheory_Clean_Plugin_Git_Updater', false) ) :
     final class Halftheory_Clean_Plugin_Git_Updater {
 
         private $plugin_prefix = 'wp-halftheory';
+        private $version = 9;
 
         public function __construct() {
             if ( is_admin() && current_user_can('manage_options') ) {
-                add_action('init', array( $this, 'init' ), 90);
-            }
-        }
-
-        /* actions */
-
-        public function init() {
-            // __construct is too early.
-            $version = '9.9.10';
-            if ( $hp = Halftheory_Clean::get_instance()->get_helper_plugin() ) {
+                $version = '9.9.10';
                 $locations = array(
                     'git-updater/git-updater.php',
                     'git-updater/github-updater.php',
                     'github-updater/github-updater.php',
                 );
                 foreach ( $locations as $location ) {
-                    if ( $tmp = $hp->get_plugin_version($location) ) {
+                    if ( $tmp = $this->get_plugin_data_field($location, 'Version') ) {
                         $version = $tmp;
                         break;
                     }
                 }
-            }
-            list($version_major, $version_minor) = explode('.', $version, 2);
-            if ( (int) $version_major >= 10 ) {
-                add_action('gu_refresh_transients', array( $this, 'refresh_transients_v10' ));
-                add_filter('gu_disable_wpcron', '__return_true');
-            } elseif ( (int) $version_major === 9 ) {
-                add_action('ghu_refresh_transients', array( $this, 'refresh_transients_v9' ));
-                add_filter('github_updater_disable_wpcron', '__return_true');
-            } elseif ( (int) $version_major <= 8 ) {
-                add_action('ghu_refresh_transients', array( $this, 'refresh_transients_v8' ));
-                add_filter('github_updater_disable_wpcron', '__return_true');
+                list($version_major) = explode('.', $version, 1);
+                $this->version = (int) $version_major;
+                // load different actions.
+                if ( $this->version >= 10 ) {
+                    add_action('gu_refresh_transients', array( $this, 'refresh_transients_v10' ));
+                    add_filter('gu_disable_wpcron', '__return_true');
+                } elseif ( $this->version === 9 ) {
+                    add_action('ghu_refresh_transients', array( $this, 'refresh_transients_v9' ));
+                    add_filter('github_updater_disable_wpcron', '__return_true');
+                } elseif ( $this->version <= 8 ) {
+                    add_action('ghu_refresh_transients', array( $this, 'refresh_transients_v8' ));
+                    add_filter('github_updater_disable_wpcron', '__return_true');
+                }
             }
         }
+
+        /* actions */
 
         public function refresh_transients_v10() {
             if ( ! in_array('git-updater/v1', rest_get_server()->get_namespaces(), true) ) {
@@ -227,6 +223,30 @@ if ( ! class_exists('Halftheory_Clean_Plugin_Git_Updater', false) ) :
             // condition for updating or ignoring theme.
             $res = strpos($theme, $this->plugin_prefix) === false ? false : true;
             return apply_filters('halftheory_ghu_refresh_transients_theme', $res, $theme);
+        }
+
+        /* copied from class-halftheory-helper-plugin.php */
+        private function get_plugin_data_field( $plugin_file = null, $field = null ) {
+            if ( empty($plugin_file) || empty($field) ) {
+                return null; // better to return null rather than false - better for wp_enqueue_scripts etc.
+            }
+            if ( strpos($plugin_file, WP_PLUGIN_DIR) === false && strpos($plugin_file, WPMU_PLUGIN_DIR) === false ) {
+                $plugin_file = WP_PLUGIN_DIR . '/' . ltrim($plugin_file, '/ ');
+            }
+            if ( ! file_exists($plugin_file) ) {
+                return null;
+            }
+            if ( ! function_exists('get_plugin_data') && is_readable(ABSPATH . 'wp-admin/includes/plugin.php') ) {
+                require_once ABSPATH . 'wp-admin/includes/plugin.php';
+            }
+            $plugin_data = get_plugin_data($plugin_file);
+            if ( ! is_array($plugin_data) ) {
+                return null;
+            }
+            if ( ! isset($plugin_data[ $field ]) ) {
+                return null;
+            }
+            return $plugin_data[ $field ];
         }
     }
 endif;
