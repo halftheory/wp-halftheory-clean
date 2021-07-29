@@ -125,6 +125,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 				remove_action('wp_head', 'wp_shortlink_wp_head', 10, 0);
 				remove_action('wp_head', 'rest_output_link_wp_head', 10, 0);
 				remove_action('wp_print_styles', 'print_emoji_styles');
+				remove_action('admin_print_scripts-index.php', 'wp_localize_community_events');
 			};
 			add_action('wp', $func, 9);
 
@@ -1993,8 +1994,17 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 				$is_singular = is_singular();
 			}
 			if ( $is_singular && has_post_thumbnail() ) :
+				$class_wide = '';
+				if ( $image = $this->get_image_context(get_post_thumbnail_id(), 'src', 'full') ) {
+					list( , $width, $height) = $image;
+					if ( is_numeric($width) && is_numeric($height) ) {
+						if ( (int) $width > 720 && (float) ( $height / $width ) <= ( 9 / 16 ) ) {
+							$class_wide = ' wide';
+						}
+					}
+				}
 				?>
-				<div class="post-thumbnail post-thumbnail-singular">
+				<div class="post-thumbnail post-thumbnail-singular<?php echo esc_attr($class_wide); ?>">
 					<a class="post-thumbnail" href="<?php the_post_thumbnail_url(); ?>" aria-hidden="true" rel="lightbox-post-thumbnail"><?php the_post_thumbnail('post-thumbnail', array( 'alt' => the_title_attribute('echo=0') )); ?></a>
 				</div><!-- .post-thumbnail -->
 				<?php
