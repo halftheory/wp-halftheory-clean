@@ -51,11 +51,20 @@ if ( ! class_exists('Halftheory_Clean_Plugin_Git_Updater', false) ) :
             $request = WP_REST_Request::from_url(get_rest_url() . 'git-updater/v1/update');
             $request->set_param('key', get_site_option('git_updater_api_key')); // 'pro' plugin - not tested!
 
+            // only way to prevent 'wp_die' and 'wp_send_json_success' from exiting is to force ajax and collect the response in a buffer.
+            add_filter('wp_doing_ajax', array( $this, 'wp_doing_ajax' ));
+            add_filter('wp_die_ajax_handler', array( $this, 'wp_die_ajax_handler' ));
+
             // plugins.
             foreach ( $this->get_plugins() as $plugin ) {
                 $request->set_param('plugin', $plugin);
+                $tmp = null;
+                ob_start();
                 if ( $response = rest_do_request($request) ) {
-                    $tmp = $response->get_data();
+                    $data = $response->get_data();
+                }
+                $tmp = ob_get_clean();
+                if ( ! empty($tmp) ) {
                     $res[] = is_string($tmp) ? $tmp : wp_json_encode($tmp);
                 }
             }
@@ -64,13 +73,22 @@ if ( ! class_exists('Halftheory_Clean_Plugin_Git_Updater', false) ) :
             // themes.
             foreach ( $this->get_themes() as $theme ) {
                 $request->set_param('theme', $theme);
+                $tmp = null;
+                ob_start();
                 if ( $response = rest_do_request($request) ) {
-                    $tmp = $response->get_data();
+                    $data = $response->get_data();
+                }
+                $tmp = ob_get_clean();
+                if ( ! empty($tmp) ) {
                     $res[] = is_string($tmp) ? $tmp : wp_json_encode($tmp);
                 }
             }
 
+            remove_filter('wp_doing_ajax', array( $this, 'wp_doing_ajax' ));
+            remove_filter('wp_die_ajax_handler', array( $this, 'wp_die_ajax_handler' ));
+
             if ( ! empty($res) ) {
+                $res = array_map('esc_html', $res);
                 echo implode("<br />\n", $res);
                 exit;
             }
@@ -85,11 +103,20 @@ if ( ! class_exists('Halftheory_Clean_Plugin_Git_Updater', false) ) :
             $request = WP_REST_Request::from_url(get_rest_url() . 'github-updater/v1/update');
             $request->set_param('key', get_site_option('github_updater_api_key'));
 
+            // only way to prevent 'wp_die' and 'wp_send_json_success' from exiting is to force ajax and collect the response in a buffer.
+            add_filter('wp_doing_ajax', array( $this, 'wp_doing_ajax' ));
+            add_filter('wp_die_ajax_handler', array( $this, 'wp_die_ajax_handler' ));
+
             // plugins.
             foreach ( $this->get_plugins() as $plugin ) {
                 $request->set_param('plugin', $plugin);
+                $tmp = null;
+                ob_start();
                 if ( $response = rest_do_request($request) ) {
-                    $tmp = $response->get_data();
+                    $data = $response->get_data();
+                }
+                $tmp = ob_get_clean();
+                if ( ! empty($tmp) ) {
                     $res[] = is_string($tmp) ? $tmp : wp_json_encode($tmp);
                 }
             }
@@ -98,13 +125,22 @@ if ( ! class_exists('Halftheory_Clean_Plugin_Git_Updater', false) ) :
             // themes.
             foreach ( $this->get_themes() as $theme ) {
                 $request->set_param('theme', $theme);
+                $tmp = null;
+                ob_start();
                 if ( $response = rest_do_request($request) ) {
-                    $tmp = $response->get_data();
+                    $data = $response->get_data();
+                }
+                $tmp = ob_get_clean();
+                if ( ! empty($tmp) ) {
                     $res[] = is_string($tmp) ? $tmp : wp_json_encode($tmp);
                 }
             }
 
+            remove_filter('wp_doing_ajax', array( $this, 'wp_doing_ajax' ));
+            remove_filter('wp_die_ajax_handler', array( $this, 'wp_die_ajax_handler' ));
+
             if ( ! empty($res) ) {
+                $res = array_map('esc_html', $res);
                 echo implode("<br />\n", $res);
                 exit;
             }
@@ -169,9 +205,18 @@ if ( ! class_exists('Halftheory_Clean_Plugin_Git_Updater', false) ) :
             }
 
             if ( ! empty($res) ) {
+                $res = array_map('esc_html', $res);
                 echo implode("<br />\n", $res);
                 exit;
             }
+        }
+
+        public function wp_doing_ajax() {
+            return true;
+        }
+
+        public function wp_die_ajax_handler() {
+            return '__return_true';
         }
 
         /* functions */
