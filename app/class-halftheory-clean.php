@@ -1425,10 +1425,10 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			if ( is_null($post_id) ) {
 				$post_id = $this->get_page_id();
 			}
-			if ( ! array_key_exists($post_id, static::$cache_posts) ) {
+			if ( ! array_key_exists( (int) $post_id, static::$cache_posts) ) {
 				static::$cache_posts[ $post_id ] = array();
 			}
-			return $post_id;
+			return (int) $post_id;
 		}
 
 		protected function cache_posts_isset( $post_id = null, $cache_key = '' ) {
