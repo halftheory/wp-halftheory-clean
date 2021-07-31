@@ -146,6 +146,7 @@ if ( ! class_exists('Halftheory_Helper_Admin', false) ) :
 			add_action('current_screen', array( $this, 'current_screen' ));
 			add_action('wp_update_nav_menu', array( $this, 'wp_update_nav_menu' ), 20, 2);
 			add_filter('heartbeat_settings', array( $this, 'heartbeat_settings' ));
+			add_filter('pre_update_option', array( $this, 'pre_update_option' ), 20, 3);
 	    	// regenerate_images.
 			if ( class_exists('Halftheory_Clean', false) ) {
 				if ( apply_filters(Halftheory_Clean::get_instance()::$prefix . '_image_size_actions', true) ) {
@@ -483,6 +484,23 @@ if ( ! class_exists('Halftheory_Helper_Admin', false) ) :
 		public function heartbeat_settings( $settings ) {
 			$settings['interval'] = 120;
 			return $settings;
+		}
+
+		public function pre_update_option( $value, $option, $old_value ) {
+			// try to prevent unecessary transients.
+			$arr = array(
+				'_transient_dash_',
+				'_transient_timeout_dash_',
+				'_transient_feed_',
+				'_transient_timeout_feed_',
+			);
+			foreach ( $arr as $v ) {
+				if ( strpos($option, $v) === 0 ) {
+					// If the new and old values are the same, no need to update.
+					return $old_value;
+				}
+			}
+			return $value;
 		}
 
 		public function media_row_actions( $actions = array(), $post = 0, $detached = false ) {
