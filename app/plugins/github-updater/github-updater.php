@@ -58,14 +58,14 @@ if ( ! class_exists('Halftheory_Clean_Plugin_GitHub_Updater', false) ) :
             // plugins.
             foreach ( $this->get_plugins() as $plugin ) {
                 $request->set_param('plugin', $plugin);
-                $tmp = null;
+                $data = null;
                 ob_start();
                 if ( $response = rest_do_request($request) ) {
                     $data = $response->get_data();
                 }
-                $tmp = ob_get_clean();
-                if ( ! empty($tmp) ) {
-                    $res[] = is_string($tmp) ? $tmp : wp_json_encode($tmp);
+                $data = ob_get_flush();
+                if ( ! empty($data) ) {
+                    $res[] = is_string($data) ? $data : wp_json_encode($data);
                 }
             }
             $request->set_param('plugin', null);
@@ -73,14 +73,14 @@ if ( ! class_exists('Halftheory_Clean_Plugin_GitHub_Updater', false) ) :
             // themes.
             foreach ( $this->get_themes() as $theme ) {
                 $request->set_param('theme', $theme);
-                $tmp = null;
+                $data = null;
                 ob_start();
                 if ( $response = rest_do_request($request) ) {
                     $data = $response->get_data();
                 }
-                $tmp = ob_get_clean();
-                if ( ! empty($tmp) ) {
-                    $res[] = is_string($tmp) ? $tmp : wp_json_encode($tmp);
+                $data = ob_get_flush();
+                if ( ! empty($data) ) {
+                    $res[] = is_string($data) ? $data : wp_json_encode($data);
                 }
             }
 
@@ -110,14 +110,14 @@ if ( ! class_exists('Halftheory_Clean_Plugin_GitHub_Updater', false) ) :
             // plugins.
             foreach ( $this->get_plugins() as $plugin ) {
                 $request->set_param('plugin', $plugin);
-                $tmp = null;
+                $data = null;
                 ob_start();
                 if ( $response = rest_do_request($request) ) {
                     $data = $response->get_data();
                 }
-                $tmp = ob_get_clean();
-                if ( ! empty($tmp) ) {
-                    $res[] = is_string($tmp) ? $tmp : wp_json_encode($tmp);
+                $data = ob_get_flush();
+                if ( ! empty($data) ) {
+                    $res[] = is_string($data) ? $data : wp_json_encode($data);
                 }
             }
             $request->set_param('plugin', null);
@@ -125,14 +125,14 @@ if ( ! class_exists('Halftheory_Clean_Plugin_GitHub_Updater', false) ) :
             // themes.
             foreach ( $this->get_themes() as $theme ) {
                 $request->set_param('theme', $theme);
-                $tmp = null;
+                $data = null;
                 ob_start();
                 if ( $response = rest_do_request($request) ) {
                     $data = $response->get_data();
                 }
-                $tmp = ob_get_clean();
-                if ( ! empty($tmp) ) {
-                    $res[] = is_string($tmp) ? $tmp : wp_json_encode($tmp);
+                $data = ob_get_flush();
+                if ( ! empty($data) ) {
+                    $res[] = is_string($data) ? $data : wp_json_encode($data);
                 }
             }
 
