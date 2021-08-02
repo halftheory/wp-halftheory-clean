@@ -682,7 +682,7 @@ if ( ! function_exists('get_the_excerpt_fallback') ) {
 			$arr = get_the_taxonomies($post_id, array( 'template' => __('###%s###%l'), 'term_template' => '%2$s' ));
 			if ( ! empty($arr) ) {
 				$func_striptax = function ( $str = '' ) {
-					$str = preg_replace("/^###[^#]*###/i", '', $str);
+					$str = preg_replace('/^###[^#]*###/i', '', $str);
 					if ( is_title_bad($str, array( 'Blog', 'blog' )) ) {
 						return '';
 					}
@@ -922,18 +922,22 @@ if ( ! function_exists('trim_excess_space') ) {
 
 		if ( strpos($str, '</') !== false ) {
 			// no space before closing tags.
-			$str = preg_replace("/[\t\n\r ]*(<\/[^>]+>)/s", '$1', $str);
+			$str = preg_replace('/[\s]*(<\/[^>]+>)/s', '$1', $str);
 		}
 		if ( strpos($str, '<br') !== false ) {
 			// no br at start/end.
-			$str = preg_replace("/^<br[\/ ]*>/s", '', $str);
-			$str = preg_replace("/<br[\/ ]*>$/s", '', $str);
+			$str = preg_replace('/^<br[\/ ]*>/is', '', $str);
+			$str = preg_replace('/<br[\/ ]*>$/is', '', $str);
+			// limit to max 2 brs.
+			$str = preg_replace('/(<br[\/ ]*>[\s]*){3,}/is', '$1$1', $str);
+            // no br directly next to p tags.
+			$str = preg_replace('/(<p>|<p [^>]+>)[\s]*<br[\/ ]*>[\s]*/is', '$1', $str);
+			$str = preg_replace('/[\s]*<br[\/ ]*>[\s]*(<\/p>)/is', '$1', $str);
 		}
 
 		$str = preg_replace("/[\t ]*(\n|\r)[\t ]*/s", '$1', $str);
-		$str = preg_replace("/(\n\r){3,}/s", '$1$1', $str);
-		$str = preg_replace("/[\n]{3,}/s", "\n\n", $str);
-		$str = preg_replace("/[ ]{2,}/s", ' ', $str);
+		$str = preg_replace("/(\n|\r){3,}/s", "\n\n", $str);
+		$str = preg_replace('/[ ]{2,}/s', ' ', $str);
 		return trim($str);
 	}
 }
@@ -951,7 +955,7 @@ if ( ! function_exists('strip_single_tag') ) {
         $str = preg_replace("/[\s]*<$tag>.*?<\/[ ]*$tag>[\s]*/is", '', $str);
         // no closing tag.
         $str = preg_replace("/[\s]*<$tag [^>]+>[\s]*/is", '', $str);
-        $str = preg_replace("/[\s]*<" . $tag . "[ \/]*>[\s]*/is", '', $str);
+        $str = preg_replace('/[\s]*<' . $tag . '[ \/]*>[\s]*/is', '', $str);
         return $str;
 	}
 }
@@ -1178,10 +1182,10 @@ if ( ! function_exists('replace_tags') ) {
 			if ( empty($new) ) {
 				continue;
 			}
-			$str = preg_replace("/<" . $old . "([\/ ]*)>/is", "<" . $new . "$1>", $str);
-			$str = preg_replace("/<" . $old . " ([^>]+)>/is", "<" . $new . " $1>", $str);
-			$str = preg_replace("/<\/" . $old . " [^>]*>/is", "</" . $new . ">", $str);
-			$str = preg_replace("/<\/" . $old . ">/is", "</" . $new . ">", $str);
+			$str = preg_replace('/<' . $old . '([\/ ]*)>/is', '<' . $new . '$1>', $str);
+			$str = preg_replace('/<' . $old . ' ([^>]+)>/is', '<' . $new . ' $1>', $str);
+			$str = preg_replace('/<\/' . $old . ' [^>]*>/is', '</' . $new . '>', $str);
+			$str = preg_replace('/<\/' . $old . '>/is', '</' . $new . '>', $str);
 		}
 		return $str;
 	}
@@ -1217,7 +1221,7 @@ if ( ! function_exists('get_excerpt') ) {
 		}
 		// add a space for lines if needed.
 		if ( $args['single_line'] && strpos($text, '<') !== false ) {
-			$text = preg_replace("/(<p>|<p [^>]*>|<\/p>|<br[\/ ]*>)/is", '$1 ', $text);
+			$text = preg_replace('/(<p>|<p [^>]*>|<\/p>|<br[\/ ]*>)/is', '$1 ', $text);
 		}
 		// remove what we don't need.
 		if ( function_exists('excerpt_remove_blocks') ) {
@@ -1273,14 +1277,14 @@ if ( ! function_exists('get_excerpt') ) {
 			$text = unwptexturize($text);
 		}
 		// remove repeating symbols, emojis.
-        $no_repeat = array( "&lt;", "&gt;", "&amp;", "&ndash;", "&bull;", "&sect;", "&hearts;", "&hellip;", "...", "++", "--", "~~", "##", "**", "==", "__", "_ ", "//" );
+        $no_repeat = array( '&lt;', '&gt;', '&amp;', '&ndash;', '&bull;', '&sect;', '&hearts;', '&hellip;', '...', '++', '--', '~~', '##', '**', '==', '__', '_ ', "//" );
 		foreach ( $no_repeat as $value ) {
 			if ( strpos($text, $value) !== false ) {
-				$text = preg_replace("/(" . preg_quote($value, '/') . "[\s]*){2,}/s", '$1', $text);
+				$text = preg_replace('/(' . preg_quote($value, '/') . '[\s]*){2,}/s', '$1', $text);
 			}
 		}
 		// no emojis.
-		$text = preg_replace("/&#(8[0-9]{3}|9[0-9]{3}|1[0-9]{4});/s", '', $text);
+		$text = preg_replace('/&#(8[0-9]{3}|9[0-9]{3}|1[0-9]{4});/s', '', $text);
 		// remove excess space.
 		if ( $args['single_line'] ) {
 			$text = preg_replace("/[\r\n ]+/s", ' ', $text);
@@ -1345,7 +1349,7 @@ if ( ! function_exists('get_excerpt') ) {
 					$len_res = mb_strlen($text);
 					$len_value = mb_strlen($value);
 					if ( $len_res > $len_value ) {
-						$text = preg_replace("/^" . preg_quote($value, '/') . "[\s]*/is", '', $text);
+						$text = preg_replace('/^' . preg_quote($value, '/') . '[\s]*/is', '', $text);
 						$replaced = true;
 					}
 				} elseif ( preg_match("~^[\s]*$value~i", $text, $match) ) {
@@ -1353,7 +1357,7 @@ if ( ! function_exists('get_excerpt') ) {
 					$len_res = mb_strlen($text);
 					$len_value = mb_strlen($match[0]);
 					if ( $len_res > $len_value ) {
-						$text = preg_replace("/^[\s]*" . preg_quote($match[0], '/') . "[\s]*/is", '', $text);
+						$text = preg_replace('/^[\s]*' . preg_quote($match[0], '/') . '[\s]*/is', '', $text);
 						$replaced = true;
 					}
 				}
@@ -1412,10 +1416,12 @@ if ( ! function_exists('get_excerpt') ) {
 				$text = rtrim($text, '. ') . '.';
 			}
 		}
+		if ( function_exists('trim_excess_space') ) {
+			$text = trim_excess_space($text);
+		}
 		// add line breaks?
 		if ( $args['single_line'] === false && $args['plaintext'] === false && strpos($text, '<br') === false ) {
 			$text = nl2br($text);
-			// TODO: cleanup br tags directly next to p tags.
 		}
 		// close open tags.
 		if ( ! empty($args['allowable_tags']) && $args['plaintext'] === false ) {
@@ -1444,8 +1450,8 @@ if ( ! function_exists('get_site_logo_url_from_site_icon') ) {
 		$url = get_site_icon_url($size_icon, '', $blog_id);
 		if ( strpos($url, 'cropped-') !== false ) {
 			$names = array(
-				preg_replace("/^.*?cropped-(.*)$/i", '$1', $url),
-				preg_replace("/^.*?cropped-([^\.]*).*$/i", '$1', $url),
+				preg_replace('/^.*?cropped-(.*)$/i', '$1', $url),
+				preg_replace('/^.*?cropped-([^\.]*).*$/i', '$1', $url),
 			);
 			$names = array_merge($names, array_map('sanitize_title', $names) );
 			$names = array_unique($names);
