@@ -131,6 +131,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 
 			add_action('wp_head', array( $this, 'wp_head' ), 20);
 			add_action('wp_head', array( $this, 'wp_site_icon' ), 100);
+			add_filter('get_site_icon_url', array( $this, 'get_site_icon_url' ), 10, 3);
 			remove_filter('wp_title', 'wptexturize');
 			add_filter('wp_title', array( $this, 'wp_title' ), 10, 3);
 			add_filter('protected_title_format', array( $this, 'protected_title_format' ));
@@ -156,6 +157,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			add_filter('xmlrpc_enabled', '__return_false');
 			add_action('pings_open', '__return_false');
 			add_filter('comments_open', '__return_false', 10, 2);
+			add_filter('pre_comment_user_ip', '__return_empty_string');
 			add_filter('feed_links_show_comments_feed', '__return_false');
 			add_filter('embed_oembed_discover', '__return_false');
 			add_filter('automatic_updater_disabled', '__return_true');
@@ -280,6 +282,8 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 				'timezone_string' => '',
 				'date_format' => 'j F Y',
 				'time_format' => 'g:i A',
+				'posts_per_rss' => 50,
+				'rss_use_excerpt' => 1,
 				// Discussion.
 				'default_pingback_flag' => '',
 				'default_ping_status' => 'closed',
@@ -714,23 +718,25 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 				get_template_directory_uri() . '/assets/favicon/',
 				get_template_directory_uri() . '/assets/images/favicon/',
 			);
-			$search_icon = array_combine($search_files, $search_urls);
-			$favicon_uri = '';
-			foreach ( $search_icon as $key => $value ) {
-				if ( file_exists($key) ) {
-					$favicon_uri = $value;
+			$search_arr = array_combine($search_files, $search_urls);
+			$favicon_uri = null;
+			foreach ( $search_arr as $file => $url ) {
+				if ( file_exists($file) ) {
+					$favicon_uri = $url;
 					break;
+				}
+			}
+			if ( empty($favicon_uri) && ! is_localhost() ) {
+				if ( url_exists(site_url('/favicon.ico')) ) {
+					// requires htaccess mod_rewrite.
+					$favicon_uri = site_url('/');
 				}
 			}
 			if ( empty($favicon_uri) ) {
 				return;
 			}
-			if ( ! is_localhost() && url_exists(site_url('/favicon.ico')) ) {
-				// requires htaccess mod_rewrite.
-				$favicon_uri = site_url('/');
-			}
 			// favicons.
-			$favicon_uri = set_url_scheme($favicon_uri);
+			$favicon_uri = set_url_scheme(trailingslashit($favicon_uri));
 			// http://www.favicon-generator.org/
 			echo '<link rel="shortcut icon" type="image/x-icon" href="' . esc_url($favicon_uri) . 'favicon.ico" />' . "\n";
 			echo '<link rel="icon" type="image/x-icon" href="' . esc_url($favicon_uri) . 'favicon.ico" />' . "\n";
@@ -753,6 +759,13 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 	<meta name="theme-color" content="#ffffff" />' . "\n";
 			// from wp.
 			echo '<link rel="apple-touch-icon-precomposed" href="' . esc_url($favicon_uri) . 'apple-icon-180x180.png" />' . "\n";
+		}
+
+		public function get_site_icon_url( $url, $size = 512, $blog_id = 0 ) {
+			if ( strpos($url, 'images/w-logo-blue-white-bg.png') !== false ) {
+				$url = false;
+			}
+			return $url;
 		}
 
 		public function wp_title( $title, $sep = '-', $seplocation = '' ) {
@@ -1533,7 +1546,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 				} else {
 					// maybe custom post types?
 			        if ( ! in_array($post->post_type, $post_types_builtin, true) && $obj = get_post_type_object($post->post_type) ) {
-			        	$ancestors[] = $obj->labels->name;
+			        	$ancestors[] = apply_filters('post_type_archive_title', $obj->labels->name, $post->post_type);
 			        } else {
 						// or taxonomies?
 						$taxonomy_objects = get_object_taxonomies($post->post_type, 'objects');
@@ -1548,7 +1561,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 										if ( is_title_bad($term->name) ) {
 											continue;
 										}
-										$ancestors[] = $term->name;
+										$ancestors[] = apply_filters('single_term_title', $term->name);
 										if ( is_taxonomy_hierarchical($term->taxonomy) ) {
 											$arr = get_ancestors($term->term_id, $term->taxonomy);
 											if ( ! empty($arr) ) {
@@ -1556,7 +1569,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 												foreach ( $arr as $value ) {
 													$term_parent = get_term($value, $term->taxonomy);
 													if ( ! empty($term_parent) && ! is_wp_error($term_parent) ) {
-														$ancestors[] = $term_parent->name;
+														$ancestors[] = apply_filters('single_term_title', $term_parent->name);
 													}
 												}
 											}
@@ -1601,7 +1614,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 								$done[] = 'is_post_type_archive';
 							} elseif ( $post_type = get_query_var('post_type', false) ) {
 								if ( ! in_array($post_type, $post_types_builtin, true) && $obj = get_post_type_object($post_type) ) {
-									$title[] = $obj->labels->name;
+					        		$title[] = apply_filters('post_type_archive_title', $obj->labels->name, $post_type);
 									$done[] = 'post_type';
 								}
 							}
@@ -1619,7 +1632,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 											foreach ( $arr as $value ) {
 												$term = get_term($value, 'category');
 												if ( ! empty($term) && ! is_wp_error($term) ) {
-													$ancestors[] = $term->name;
+													$ancestors[] = apply_filters('single_cat_title', $term->name);
 												}
 											}
 										}
@@ -1631,10 +1644,10 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 								$done[] = 'is_tag';
 							} elseif ( is_tax() ) {
 								if ( isset($obj->term_id) ) {
-									$title[] = $obj->name;
+									$title[] = apply_filters('single_term_title', $obj->name);
 									$done[] = 'is_tax';
 									if ( $tax = get_taxonomy($obj->taxonomy) ) {
-										$ancestors[] = $tax->labels->name;
+										$ancestors[] = apply_filters('single_term_title', $tax->labels->name);
 									}
 									if ( is_taxonomy_hierarchical($obj->taxonomy) ) {
 										$arr = get_ancestors($obj->term_id, $obj->taxonomy);
@@ -1643,7 +1656,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 											foreach ( $arr as $value ) {
 												$term = get_term($value, $obj->taxonomy);
 												if ( ! empty($term) && ! is_wp_error($term) ) {
-													$ancestors[] = $term->name;
+													$ancestors[] = apply_filters('single_term_title', $term->name);
 												}
 											}
 										}
@@ -1668,7 +1681,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 					}
 					if ( $post_type = get_query_var('post_type', false) && ! in_array('post_type', $done, true) ) {
 						if ( ! in_array($post_type, $post_types_builtin, true) && $obj = get_post_type_object($post_type) ) {
-							$title[] = $obj->labels->name;
+			        		$title[] = apply_filters('post_type_archive_title', $obj->labels->name, $post_type);
 							$done[] = 'post_type';
 						}
 					}
@@ -1683,7 +1696,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 										foreach ( $arr as $value ) {
 											$term = get_term($value, 'category');
 											if ( ! empty($term) && ! is_wp_error($term) ) {
-												$ancestors[] = $term->name;
+												$ancestors[] = apply_filters('single_cat_title', $term->name);
 											}
 										}
 									}
@@ -1701,10 +1714,10 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 					}
 					if ( is_tax() && ! in_array('is_tax', $done, true) ) {
 						if ( isset($obj->term_id) ) {
-							$title[] = $obj->name;
+							$title[] = apply_filters('single_term_title', $obj->name);
 							if ( empty($done) ) {
 								if ( $tax = get_taxonomy($obj->taxonomy) ) {
-									$ancestors[] = $tax->labels->name;
+									$ancestors[] = apply_filters('single_term_title', $tax->labels->name);
 								}
 								if ( is_taxonomy_hierarchical($obj->taxonomy) ) {
 									$arr = get_ancestors($obj->term_id, $obj->taxonomy);
@@ -1713,7 +1726,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 										foreach ( $arr as $value ) {
 											$term = get_term($value, $obj->taxonomy);
 											if ( ! empty($term) && ! is_wp_error($term) ) {
-												$ancestors[] = $term->name;
+												$ancestors[] = apply_filters('single_term_title', $term->name);
 											}
 										}
 									}
