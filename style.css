@@ -58,3 +58,5 @@ a:focus { outline: 0; }
 .clearfix:after { clear: both; }
 
 button.single-line, .single-line.button { display: inline-block; }
+
+.bottom { vertical-align: bottom; }

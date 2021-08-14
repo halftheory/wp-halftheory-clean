@@ -44,13 +44,7 @@ if ( ! class_exists('Halftheory_Helper_Infinite_Scroll', false) ) :
 		}
 
 		public function wp_ajax_infinite_scroll() {
-			if ( ! isset($_POST) ) {
-				wp_die();
-			}
-			if ( empty($_POST) ) {
-				wp_die();
-			}
-			if ( ! isset($_POST['page']) ) {
+			if ( ! isset($_POST, $_POST['page']) ) {
 				wp_die();
 			}
 			$args = array( 'paged' => $_POST['page'], 'post_status' => 'publish,inherit' );
@@ -112,26 +106,27 @@ if ( ! class_exists('Halftheory_Helper_Infinite_Scroll', false) ) :
 			}
 			$template_default = false;
 			if ( isset($_POST['template']) ) {
-				$template_default = $_POST['template'];
-				if ( strpos($template_default, ABSPATH) === false ) {
-					$template_default = locate_template(array( ltrim($template_default, '/\\') ), false);
+				if ( file_exists($_POST['template']) ) {
+					$template_default = $_POST['template'];
+				} else {
+					$template_default = locate_template(array( ltrim($_POST['template'], '/\\') ), false);
 				}
 			}
 			// Start the loop.
 			while ( have_posts() ) {
 				the_post();
 				global $post;
-				$template = $template_default;
-				$template = apply_filters('halftheory_helper_infinite_scroll_template', $template, $post, $args);
+				$template = apply_filters('halftheory_helper_infinite_scroll_template', $template_default, $post, $args);
 				if ( empty($template) && class_exists('Halftheory_Clean', false) ) {
 					if ( $hp = Halftheory_Clean::get_instance()->get_helper_plugin() ) {
 						$template = $hp->get_template($wp_query);
 					}
 				}
-				if ( $template ) {
+				if ( empty($template) ) {
+					$template = locate_template(array( 'index.php' ), false);
+				}
+				if ( ! empty($template) && file_exists($template) ) {
 					load_template($template, false);
-				} else {
-					load_template(get_stylesheet_directory() . '/index.php', false);
 				}
 			} // End the loop.
 			wp_reset_query();
@@ -216,7 +211,7 @@ if ( ! class_exists('Halftheory_Helper_Infinite_Scroll', false) ) :
 				wp_enqueue_script('jqueryrotate', get_template_directory_uri() . '/app/helpers/infinite-scroll/jQueryRotateCompressed.js', array( 'jquery' ), '2.3', true);
 				wp_enqueue_script($handle, get_template_directory_uri() . '/app/helpers/infinite-scroll/infinite-scroll.min.js', array( 'jquery', 'jqueryrotate' ), '', true);
 			}
-			// build the data array
+			// build the data array.
 			$data = array(
 				'action' => $this->ajax_action,
 			);
@@ -224,7 +219,7 @@ if ( ! class_exists('Halftheory_Helper_Infinite_Scroll', false) ) :
 				$data['blog_id'] = $this->query_blog_id;
 			}
 
-			// get current query
+			// get current query.
 			if ( is_array($this->query->query) ) {
 				$arr = array();
 				foreach ( $this->query->query as $key => $value ) {

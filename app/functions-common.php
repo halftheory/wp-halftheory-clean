@@ -858,7 +858,7 @@ if ( ! function_exists('set_url_scheme_blob') ) {
 		if ( $scheme === 'relative' ) {
 			$str = preg_replace('#\w+://[^/]*#', '', $str);
 		} else {
-			$str = preg_replace('#\w+://#', $scheme . '://', $str);
+			$str = preg_replace('#\w+://(\w+)#', $scheme . '://$1', $str);
 		}
 		return $str;
 	}
