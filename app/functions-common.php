@@ -1367,7 +1367,7 @@ if ( ! function_exists('get_excerpt') ) {
 			}
 		}
 		// correct length.
-		$last_char = "\w" . preg_quote(":;@&%=+$?_.-#/>",'/');
+		$last_char = '\w' . preg_quote(":;@&%=+$?_.-#/>)»",'/');
 		// TODO: find a fast way of checking multibyte strings here.
 		if ( strlen(strip_tags($text)) <= $length ) {
 			if ( $args['add_stop'] && ! empty(strip_tags($text)) ) {

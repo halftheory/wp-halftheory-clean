@@ -205,11 +205,11 @@ if ( ! class_exists('Halftheory_Helper_Infinite_Scroll', false) ) :
 			if ( method_exists('Halftheory_Clean', 'get_theme_version') ) {
 				wp_enqueue_style($handle, get_template_directory_uri() . '/app/helpers/infinite-scroll/infinite-scroll.css', array(), Halftheory_Clean::get_instance()->get_theme_version(get_template_directory() . '/app/helpers/infinite-scroll/infinite-scroll.css'), 'screen');
 				wp_enqueue_script('jqueryrotate', get_template_directory_uri() . '/app/helpers/infinite-scroll/jQueryRotateCompressed.js', array( 'jquery' ), '2.3', true);
-				wp_enqueue_script($handle, get_template_directory_uri() . '/app/helpers/infinite-scroll/infinite-scroll.min.js', array( 'jquery', 'jqueryrotate' ), Halftheory_Clean::get_instance()->get_theme_version(get_template_directory() . '/app/helpers/infinite-scroll/infinite-scroll.min.js'), true);
+				wp_enqueue_script($handle, get_template_directory_uri() . '/app/helpers/infinite-scroll/infinite-scroll' . ( ! ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) ? '.min' : '' ) . '.js', array( 'jquery', 'jqueryrotate' ), Halftheory_Clean::get_instance()->get_theme_version(get_template_directory() . '/app/helpers/infinite-scroll/infinite-scroll' . ( ! ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) ? '.min' : '' ) . '.js'), true);
 			} else {
 				wp_enqueue_style($handle, get_template_directory_uri() . '/app/helpers/infinite-scroll/infinite-scroll.css', array(), '', 'screen');
 				wp_enqueue_script('jqueryrotate', get_template_directory_uri() . '/app/helpers/infinite-scroll/jQueryRotateCompressed.js', array( 'jquery' ), '2.3', true);
-				wp_enqueue_script($handle, get_template_directory_uri() . '/app/helpers/infinite-scroll/infinite-scroll.min.js', array( 'jquery', 'jqueryrotate' ), '', true);
+				wp_enqueue_script($handle, get_template_directory_uri() . '/app/helpers/infinite-scroll/infinite-scroll' . ( ! ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) ? '.min' : '' ) . '.js', array( 'jquery', 'jqueryrotate' ), '', true);
 			}
 			// build the data array.
 			$data = array(
