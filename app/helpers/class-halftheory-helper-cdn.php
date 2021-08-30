@@ -33,7 +33,6 @@ if ( ! class_exists('Halftheory_Helper_CDN', false) ) :
     		} elseif ( is_admin() ) {
     			return;
     		}
-
     		add_action('wp_print_styles', array( $this, 'wp_print_scripts_cdn' ), 1);
     		add_action('wp_print_scripts', array( $this, 'wp_print_scripts_cdn' ), 1);
     		add_action('wp_print_footer_scripts', array( $this, 'wp_print_scripts_cdn' ), 1);
@@ -71,7 +70,10 @@ if ( ! class_exists('Halftheory_Helper_CDN', false) ) :
     				static::$common['transient_name_replacements'] = Halftheory_Clean::get_instance()::$prefix . '_cdn_replacements';
     				static::$common['transient_name_json'] = Halftheory_Clean::get_instance()::$prefix . '_cdn_json';
     				unset($hp);
-    	    	}
+    	    	} else {
+                    static::$common['transient_name_replacements'] = 'halftheoryclean_cdn_replacements';
+                    static::$common['transient_name_json'] = 'halftheoryclean_cdn_json';
+                }
     		} else {
     			$func = function ( $str ) {
     				return trailingslashit(WP_PLUGIN_DIR) . $str;
@@ -80,6 +82,8 @@ if ( ! class_exists('Halftheory_Helper_CDN', false) ) :
     				require_once ABSPATH . 'wp-admin/includes/plugin.php';
     			}
     			static::$common['active_plugins'] = array_map($func, array_keys(get_plugins()));
+                static::$common['transient_name_replacements'] = 'halftheoryclean_cdn_replacements';
+                static::$common['transient_name_json'] = 'halftheoryclean_cdn_json';
     		}
     	}
 
@@ -399,46 +403,54 @@ if ( ! class_exists('Halftheory_Helper_CDN', false) ) :
     			return; // only do this once
     		}
     		$this->init();
-    		if ( ! static::$common['helper_plugin'] ) {
-    			return;
-    		}
-    		if ( $arr = static::$common['helper_plugin']->get_transient(static::$common['transient_name_replacements']) ) {
+            $replacements = null;
+            $json = null;
+    		if ( static::$common['helper_plugin'] ) {
+    			$replacements = static::$common['helper_plugin']->get_transient(static::$common['transient_name_replacements']);
+                $json = static::$common['helper_plugin']->get_transient(static::$common['transient_name_json']);
+    		} else {
+                $replacements = get_transient(static::$common['transient_name_replacements']);
+                $json = get_transient(static::$common['transient_name_replacements']);
+            }
+    		if ( ! empty($replacements) ) {
     			// remove past - empty items remove after 1 day - valid items remove after 1 week.
-    			foreach ( $arr as $key => $value ) {
+    			foreach ( $replacements as $key => $value ) {
     				if ( empty($value['cdn']) ) {
     					if ( $value['time'] < static::$common['time_past_day'] ) {
-    						unset($arr[ $key ]);
+    						unset($replacements[ $key ]);
     					}
     				} else {
     					if ( $value['time'] < static::$common['time_past_week'] ) {
-    						unset($arr[ $key ]);
+    						unset($replacements[ $key ]);
     					}
     				}
     			}
-    			static::$cache_replacements = $arr;
+    			static::$cache_replacements = $replacements;
     		}
-    		if ( $arr = static::$common['helper_plugin']->get_transient(static::$common['transient_name_json']) ) {
-    			foreach ( $arr as $key => $value ) {
+            if ( ! empty($json) ) {
+    			foreach ( $json as $key => $value ) {
     				if ( empty($value['json']) ) {
     					if ( $value['time'] < static::$common['time_past_day'] ) {
-    						unset($arr[ $key ]);
+    						unset($json[ $key ]);
     					}
     				} else {
     					if ( $value['time'] < static::$common['time_past_week'] ) {
-    						unset($arr[ $key ]);
+    						unset($json[ $key ]);
     					}
     				}
     			}
-    			static::$cache_json = $arr;
+    			static::$cache_json = $json;
     		}
     	}
 
     	private function cache_save() {
-    		if ( ! static::$common['helper_plugin'] ) {
-    			return;
-    		}
-        	static::$common['helper_plugin']->set_transient(static::$common['transient_name_replacements'], static::$cache_replacements, '1 week');
-        	static::$common['helper_plugin']->set_transient(static::$common['transient_name_json'], static::$cache_json, '1 week');
+    		if ( static::$common['helper_plugin'] ) {
+                static::$common['helper_plugin']->set_transient(static::$common['transient_name_replacements'], static::$cache_replacements, '1 week');
+                static::$common['helper_plugin']->set_transient(static::$common['transient_name_json'], static::$cache_json, '1 week');
+    		} else {
+                set_transient(static::$common['transient_name_replacements'], static::$cache_replacements, DAY_IN_SECONDS * 7);
+                set_transient(static::$common['transient_name_json'], static::$cache_json, DAY_IN_SECONDS * 7);
+            }
     	}
 
     	private function cache_cdn( $src_ver_key, $cdn, $handle ) {
