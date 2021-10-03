@@ -1783,6 +1783,7 @@ if ( ! function_exists('get_post_type_archive_title') ) {
 if ( ! function_exists('is_title_bad') ) {
 	function is_title_bad( $str = '', $bad_titles = array() ) {
 		$arr = array_merge(array( '', 'Uncategorized', 'uncategorized', 'Uncategorised', 'uncategorised' ), make_array($bad_titles));
+		$arr = apply_filters('is_title_bad_array', $arr);
 		return in_array(trim($str), $arr, true);
 	}
 }
