@@ -41,7 +41,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 		protected function setup_globals() {
 			$this->plugin_name = get_called_class();
 			$this->plugin_title = ucwords(str_replace('_', ' ', $this->plugin_name));
-			static::$prefix = preg_replace("/[^a-z0-9]/", '', sanitize_key($this->plugin_name));
+			static::$prefix = preg_replace('/[^a-z0-9]/', '', sanitize_key($this->plugin_name));
 		}
 
 		protected function setup_plugins() {
@@ -587,7 +587,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			$terms = get_the_taxonomies($post_id, array( 'template' => __('###%s###%l'), 'term_template' => '%2$s' ));
 			if ( ! empty($terms) ) {
 				$func = function ( $str = '' ) {
-					$str = preg_replace("/^###[^#]*###/i", '', $str);
+					$str = preg_replace('/^###[^#]*###/i', '', $str);
 					if ( is_title_bad($str) ) {
 						return '';
 					}
@@ -765,6 +765,9 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 		public function get_site_icon_url( $url, $size = 512, $blog_id = 0 ) {
 			if ( strpos($url, 'images/w-logo-blue-white-bg.png') !== false ) {
 				$url = false;
+			}
+			if ( $url ) {
+				$url = set_url_scheme($url);
 			}
 			return $url;
 		}
@@ -962,7 +965,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 					if ( preg_match_all("/ src=\"([^\"]+)\"/is", $cache, $matches) ) {
 						if ( ! empty($matches) ) {
 							if ( $matches[1][0] ) {
-								$cache = preg_replace("/" . preg_quote($matches[1][0], '/') . "/", add_query_arg($provider_params, $matches[1][0]), $cache, 1);
+								$cache = preg_replace('/' . preg_quote($matches[1][0], '/') . '/', add_query_arg($provider_params, $matches[1][0]), $cache, 1);
 							}
 						}
 					}
