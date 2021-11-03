@@ -929,6 +929,15 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			if ( empty($cache) ) {
 				return $cache;
 			}
+
+			// Skip embeds for non-trusted providers (e.g. wordpress blogs).
+			$oembed = _wp_oembed_get_object();
+			if ( ! empty($oembed) && is_object($oembed) ) {
+				if ( false === $oembed->get_provider($url, array( 'discover' => false )) ) {
+					return $url;
+				}
+			}
+
 			// Player Parameters.
 			$params = array(
 				// https://developers.google.com/youtube/player_parameters
