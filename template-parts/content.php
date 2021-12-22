@@ -14,6 +14,9 @@ if ( is_singular() ) {
 		Halftheory_Clean::get_instance()->post_thumbnail();
 	}
 	the_content();
+	if ( is_attachment() ) {
+		the_excerpt();
+	}
 } elseif ( is_home_page() && get_post_type() === 'post' && get_option('show_on_front') === 'posts' ) {
 	the_title('<h2 class="entry-title" itemprop="name"><a href="' . esc_url(get_the_permalink()) . '">', '</a></h2>');
 	if ( method_exists('Halftheory_Clean', 'post_thumbnail') ) {

@@ -308,8 +308,8 @@ if ( ! class_exists('Halftheory_Helper_Infinite_Scroll', false) ) :
 				'loader' => apply_filters('halftheory_helper_infinite_scroll_loader', get_template_directory_uri() . '/app/helpers/infinite-scroll/ajax-loader.png'),
 			);
 			if ( is_paged() ) {
-				global $paged;
-				$js_data['paged'] = $paged;
+	            global $paged, $page;
+				$js_data['paged'] = ! empty($paged) ? $paged : $page;
 			}
 			// $js_data['data']['template'] can be set with this filter.
 			wp_localize_script($handle, $handle, apply_filters('halftheory_helper_infinite_scroll_script_data', $js_data));

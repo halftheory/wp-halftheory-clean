@@ -133,7 +133,7 @@ if ( ! class_exists('Halftheory_Helper_Minify', false) ) :
 				}
 			}
 			if ( $this->config('js') ) {
-				// crashes! disabled for now
+				// crashes! disabled for now...
 				// /lib/Minify/JS/JShrink/src/JShrink/Minifier.php
 				// > $jshrink = new Minifier(); // namespace issue?
 				/*

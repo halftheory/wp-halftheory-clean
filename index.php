@@ -27,7 +27,6 @@ defined('ABSPATH') || exit;
 			get_template_part('template-parts/content', get_post_type());
 		}
 		// End the loop.
-
 		// Previous/next page navigation.
 		if ( method_exists('Halftheory_Clean', 'pagination_args') ) {
 			the_posts_pagination(Halftheory_Clean::get_instance()->pagination_args());
