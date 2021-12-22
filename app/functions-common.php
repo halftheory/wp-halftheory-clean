@@ -43,6 +43,15 @@ if ( ! function_exists('empty_notzero') ) {
 	}
 }
 
+if ( ! function_exists('esc_textarea_substitute') ) {
+    function esc_textarea_substitute( $text ) {
+        // https://developer.wordpress.org/reference/functions/esc_textarea/
+        // if flags is only 'ENT_QUOTES' strings with special characters like ascii art will return empty.
+        $safe_text = htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, get_option('blog_charset', 'UTF-8'));
+        return apply_filters('esc_textarea', $safe_text, $text);
+    }
+}
+
 // replaces old 'get_file_contents' function.
 if ( ! function_exists('file_get_contents_extended') ) {
 	function file_get_contents_extended( $filename = '' ) {

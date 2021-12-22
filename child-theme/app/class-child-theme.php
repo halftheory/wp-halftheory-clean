@@ -24,10 +24,12 @@ if ( ! class_exists('Halftheory_Clean_Child_Theme', false) && class_exists('Half
 		protected function setup_actions() {
 			parent::setup_actions();
 			parent::setup_helper_admin();
-			parent::setup_helper_cdn();
-			parent::setup_helper_infinite_scroll();
-			parent::setup_helper_minify();
-			parent::setup_helper_plugin();
+			#parent::setup_helper_cdn();
+			#parent::setup_helper_gallery_carousel();
+			#parent::setup_helper_infinite_scroll();
+			#parent::setup_helper_minify();
+			#parent::setup_helper_pages_to_categories();
+			#parent::setup_helper_plugin();
 		}
 
 		/* actions */

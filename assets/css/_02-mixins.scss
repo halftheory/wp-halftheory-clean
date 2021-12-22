@@ -504,7 +504,7 @@ $iframe-audio: iframes("soundcloud.com/","spotify.com/","mixcloud.com/");
 			> a:after {
 				transform: rotate(180deg);
 			}
-			> ul.sub-menu {
+			> ul#{$selector-sub-menu} {
 				visibility: visible;
 				opacity: 1;
 			}
@@ -512,7 +512,7 @@ $iframe-audio: iframes("soundcloud.com/","spotify.com/","mixcloud.com/");
 	}
 }
 
-@mixin menu-ul-current ($selector-menu-item: '.menu-item', $selector-current: ('.current-menu-parent', '.current-page-parent', '.current_page_parent', '.current_page_ancestor' '.current-menu-item' '.current-menu-ancestor' '.current-page-ancestor', '.current_page_item')) {
+@mixin menu-ul-current ($selector-menu-item: '.menu-item', $selector-current: ('.current-menu-parent', '.current-page-parent', '.current_page_parent', '.current_page_ancestor', '.current-menu-item', '.current-menu-ancestor', '.current-page-ancestor', '.current_page_item')) {
 	> li#{$selector-menu-item} {
 		$max: length($selector-current);
 		@for $i from 1 through $max {

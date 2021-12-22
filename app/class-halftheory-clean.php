@@ -148,6 +148,8 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			add_filter('embed_oembed_html', array( $this, 'embed_oembed_html' ), 10, 4);
 			add_filter('post_type_archive_link', array( $this, 'post_type_archive_link' ), 10, 2);
 			add_filter('wp_get_attachment_url', array( $this, 'wp_get_attachment_url' ), 10, 2);
+			add_action('pre_get_posts', array( $this, 'pre_get_posts' ), 20);
+			add_filter('the_posts', array( $this, 'the_posts' ), 20, 2);
 
 			if ( apply_filters(static::$prefix . '_image_size_actions', true) ) {
 				add_filter('big_image_size_threshold', array( $this, 'big_image_size_threshold' ), 10, 4);
@@ -210,6 +212,27 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			return isset($this->helper_cdn) ? $this->helper_cdn : false;
 		}
 
+		protected function setup_helper_gallery_carousel() {
+			// Only do this once.
+			if ( isset($this->helper_gallery_carousel) ) {
+				return;
+			}
+			if ( ! class_exists('Halftheory_Helper_Gallery_Carousel', false) && is_readable(dirname(__FILE__) . '/helpers/class-halftheory-helper-gallery-carousel.php') ) {
+				include_once dirname(__FILE__) . '/helpers/class-halftheory-helper-gallery-carousel.php';
+			}
+			if ( class_exists('Halftheory_Helper_Gallery_Carousel', false) ) {
+				$this->helper_gallery_carousel = new Halftheory_Helper_Gallery_Carousel();
+			} else {
+				$this->helper_gallery_carousel = false;
+			}
+		}
+		public function get_helper_gallery_carousel( $load = false ) {
+			if ( $load ) {
+				$this->setup_helper_gallery_carousel();
+			}
+			return isset($this->helper_gallery_carousel) ? $this->helper_gallery_carousel : false;
+		}
+
 		protected function setup_helper_infinite_scroll() {
 			// Only do this once.
 			if ( isset($this->helper_infinite_scroll) ) {
@@ -250,6 +273,27 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 				$this->setup_helper_minify();
 			}
 			return isset($this->helper_minify) ? $this->helper_minify : false;
+		}
+
+		protected function setup_helper_pages_to_categories() {
+			// Only do this once.
+			if ( isset($this->helper_pages_to_categories) ) {
+				return;
+			}
+			if ( ! class_exists('Halftheory_Helper_Pages_To_Categories', false) && is_readable(dirname(__FILE__) . '/helpers/class-halftheory-helper-pages-to-categories.php') ) {
+				include_once dirname(__FILE__) . '/helpers/class-halftheory-helper-pages-to-categories.php';
+			}
+			if ( class_exists('Halftheory_Helper_Pages_To_Categories', false) ) {
+				$this->helper_pages_to_categories = new Halftheory_Helper_Pages_To_Categories();
+			} else {
+				$this->helper_pages_to_categories = false;
+			}
+		}
+		public function get_helper_pages_to_categories( $load = false ) {
+			if ( $load ) {
+				$this->setup_helper_pages_to_categories();
+			}
+			return isset($this->helper_pages_to_categories) ? $this->helper_pages_to_categories : false;
 		}
 
 		protected function setup_helper_plugin() {
@@ -784,8 +828,9 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			if ( ! empty($ancestors) ) {
 				$ancestors = array_unique( array_merge($ancestors, (array) $title) );
 				if ( is_paged() ) {
-					global $paged;
-					$ancestors[] = __('Page') . ' ' . $paged;
+					global $paged, $page;
+					$tmp = ! empty($paged) ? $paged : $page;
+					$ancestors[] = __('Page') . ' ' . $tmp;
 				}
 				if ( $seplocation === 'right' ) {
 					$ancestors = array_reverse($ancestors);
@@ -873,8 +918,22 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 				'h6' => 'strong',
 			);
 			$str = replace_tags($str, $replace_tags_arr);
+			$single_line = true;
 			// strip_tags_attr.
-			if ( is_feed() ) {
+			if ( is_attachment() && ! is_feed() ) {
+				$single_line = false;
+				$strip_tags_arr = array(
+					'a' => array( 'href', 'title' ),
+					'b' => '',
+					'del' => '',
+					'em' => '',
+					'i' => '',
+					'strong' => '',
+					'u' => '',
+					'br' => '',
+				);
+			} elseif ( is_feed() ) {
+				$single_line = false;
 				$strip_tags_arr = array(
 					'a' => array( 'href', 'title' ),
 					'b' => '',
@@ -901,7 +960,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			$args = array(
 				'allowable_tags' => array_keys($strip_tags_arr),
 				'plaintext' => false,
-				'single_line' => ! is_feed(),
+				'single_line' => $single_line,
 				'trim_urls' => true,
 				'strip_shortcodes' => true,
 				'strip_emails' => true,
@@ -1005,6 +1064,31 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
         		$url = set_url_scheme($url);
     		}
 			return $url;
+		}
+
+		public function pre_get_posts( $query ) {
+			// galleries - enable filters so that we can use 'the_posts'.
+			if ( is_front_end() && (int) did_action('get_header') > 0 && (int) did_action('loop_start') > 0 && ! $query->is_main_query() && $query->get('post_type') === 'attachment' ) {
+				global $post;
+				if ( is_object($post) && has_shortcode($post->post_content, 'gallery') ) {
+					if ( $query->get('suppress_filters') ) {
+						$query->set('suppress_filters', false);
+					}
+				}
+			}
+		}
+
+		public function the_posts( $posts, $query ) {
+			// galleries - new lines in gallery captions.
+			if ( is_front_end() && (int) did_action('get_header') > 0 && (int) did_action('loop_start') > 0 && ! $query->is_main_query() && $query->get('post_type') === 'attachment' ) {
+				global $post;
+				if ( is_object($post) && has_shortcode($post->post_content, 'gallery') ) {
+					foreach ( $posts as $key => &$value ) {
+						$value->post_excerpt = nl2br(trim($value->post_excerpt));
+					}
+				}
+			}
+			return $posts;
 		}
 
 		public function big_image_size_threshold( $threshold = 2000, $imagesize = array(), $file = '', $attachment_id = 0 ) {
