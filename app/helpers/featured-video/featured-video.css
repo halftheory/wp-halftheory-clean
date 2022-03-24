@@ -1,0 +1,7 @@
+div.wp-video video { background-color: #000; }
+
+.post-video > a { display: flex; }
+
+.post-video video { pointer-events: none; }
+
+.post-video video::-webkit-media-controls { display: none !important; }

@@ -25,6 +25,7 @@ if ( ! class_exists('Halftheory_Clean_Child_Theme', false) && class_exists('Half
 			parent::setup_actions();
 			parent::setup_helper_admin();
 			#parent::setup_helper_cdn();
+			#parent::setup_helper_featured_video();
 			#parent::setup_helper_gallery_carousel();
 			#parent::setup_helper_infinite_scroll();
 			#parent::setup_helper_minify();

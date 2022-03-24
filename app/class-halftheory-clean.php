@@ -75,8 +75,8 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			if ( is_dir(get_template_directory() . '/app/plugins') ) {
 				$plugins_dirs[] = get_template_directory() . '/app/plugins';
 			}
-    		if ( is_dir(__DIR__ . '/plugins') ) {
-    			$plugins_dirs[] = __DIR__ . '/plugins';
+    		if ( is_dir(dirname(__FILE__) . '/plugins') ) {
+    			$plugins_dirs[] = dirname(__FILE__) . '/plugins';
     		}
     		$plugins_dirs = array_unique($plugins_dirs);
     		$plugins_dirs = array_reverse($plugins_dirs);
@@ -103,7 +103,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 
 			add_action('after_setup_theme', array( $this, 'after_setup_theme' ), 20);
 			add_action('rewrite_rules_array', array( $this, 'rewrite_rules_array' ), 20);
-			add_action('init', array( $this, 'init' ), 20);
+            add_action('init', array( $this, 'init' ), 20);
 			add_action('widgets_init', array( $this, 'widgets_init_remove_recent_comments' ), 20);
 			add_action('widgets_init', array( $this, 'widgets_init' ), 20);
 			add_filter('request', array( $this, 'request' ), 20);
@@ -156,6 +156,17 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 				add_filter('intermediate_image_sizes', array( $this, 'intermediate_image_sizes' ));
 				add_filter('image_downsize', array( $this, 'image_downsize' ), 10, 3);
 			}
+
+			if ( apply_filters(static::$prefix . '_post_sort_actions', true) ) {
+				// sorting by post_date is unreliable when posts have the same post_date, so we also sort by ID.
+				add_filter('posts_orderby', array( $this, 'posts_orderby' ), 20, 2);
+				add_filter('get_next_post_where', array( $this, 'get_adjacent_post_where' ), 20, 5);
+				add_filter('get_previous_post_where', array( $this, 'get_adjacent_post_where' ), 20, 5);
+				add_filter('get_next_post_sort', array( $this, 'get_adjacent_post_sort' ), 20, 3);
+				add_filter('get_previous_post_sort', array( $this, 'get_adjacent_post_sort' ), 20, 3);
+			}
+
+            add_filter('wp_image_editors', array( $this, 'wp_image_editors' ));
 
 			add_filter('xmlrpc_enabled', '__return_false');
 			add_action('pings_open', '__return_false');
@@ -210,6 +221,27 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 				$this->setup_helper_cdn();
 			}
 			return isset($this->helper_cdn) ? $this->helper_cdn : false;
+		}
+
+		protected function setup_helper_featured_video() {
+			// Only do this once.
+			if ( isset($this->helper_featured_video) ) {
+				return;
+			}
+			if ( ! class_exists('Halftheory_Helper_Featured_Video', false) && is_readable(dirname(__FILE__) . '/helpers/class-halftheory-helper-featured-video.php') ) {
+				include_once dirname(__FILE__) . '/helpers/class-halftheory-helper-featured-video.php';
+			}
+			if ( class_exists('Halftheory_Helper_Featured_Video', false) ) {
+				$this->helper_featured_video = new Halftheory_Helper_Featured_Video();
+			} else {
+				$this->helper_featured_video = false;
+			}
+		}
+		public function get_helper_featured_video( $load = false ) {
+			if ( $load ) {
+				$this->setup_helper_featured_video();
+			}
+			return isset($this->helper_featured_video) ? $this->helper_featured_video : false;
 		}
 
 		protected function setup_helper_gallery_carousel() {
@@ -1125,6 +1157,47 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			}
 			return $out;
 		}
+
+		public function posts_orderby( $orderby, $wp_query ) {
+			global $wpdb;
+			if ( preg_match_all('/^' . $wpdb->posts . '\.(post_date|post_date_gmt|post_modified|post_modified_gmt) (DESC|ASC)$/i', $orderby, $matches, PREG_SET_ORDER) ) {
+				$order_id = strtoupper(trim($matches[0][2])) === 'DESC' ? 'ASC' : 'DESC';
+				$orderby .= ", $wpdb->posts.ID $order_id";
+			}
+			return $orderby;
+		}
+
+		public function get_adjacent_post_where( $where, $in_same_term = false, $excluded_terms = '', $taxonomy = 'category', $post = 0 ) {
+			if ( preg_match_all('/^WHERE p\.post_date ([<>]) (\'[0-9\-: ]+\')( AND p\.post_type = .+)$/i', $where, $matches, PREG_SET_ORDER) ) {
+				$op = $matches[0][1];
+				$current_post_date = $matches[0][2];
+				$op_id = trim($op) === '>' ? '<' : '>';
+				$where = "WHERE (p.post_date $op $current_post_date OR (p.post_date = $current_post_date AND p.ID $op_id $post->ID))" . $matches[0][3];
+			}
+			return $where;
+		}
+
+		public function get_adjacent_post_sort( $sort, $post = 0, $order = 'DESC' ) {
+			if ( preg_match_all('/^(ORDER BY p\.post_date ' . $order . ')( LIMIT 1)$/i', $sort, $matches, PREG_SET_ORDER) ) {
+				$order_id = strtoupper(trim($order)) === 'DESC' ? 'ASC' : 'DESC';
+				$sort = $matches[0][1] . ', p.ID ' . $order_id . $matches[0][2];
+			}
+			return $sort;
+		}
+
+        public function wp_image_editors( $implementations = array() ) {
+            // wp-includes/media.php
+            if ( class_exists('Gmagick', false) ) {
+                if ( ! class_exists('WP_Image_Editor_Gmagick', false) && is_readable(dirname(__FILE__) . '/includes/class-wp-image-editor-gmagick.php') ) {
+                    require_once dirname(__FILE__) . '/includes/class-wp-image-editor-gmagick.php';
+                }
+                if ( class_exists('WP_Image_Editor_Gmagick', false) ) {
+                    $implementations = array_merge(array( 'WP_Image_Editor_Gmagick' ), $implementations);
+                    $implementations = array_unique($implementations);
+                }
+            }
+            return $implementations;
+        }
 
 		/* functions */
 
