@@ -9,6 +9,9 @@
         &.gallery-aspectratio-21-9 {
             .gallery-item {
                 .gallery-icon {
+                    > a {
+                        display: inline;
+                    }
                     img {
                         object-fit: cover;
                         width: 100%;

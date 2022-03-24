@@ -131,7 +131,7 @@ if ( ! class_exists('Halftheory_Helper_Pages_To_Categories', false) ) :
 				the_post();
 				global $post;
 				$template = apply_filters('halftheory_helper_pages_to_categories_template', false, $post, $args);
-				if ( empty($template) && class_exists('Halftheory_Clean', false) ) {
+				if ( empty($template) && method_exists('Halftheory_Clean', 'get_helper_plugin') ) {
 					if ( $hp = Halftheory_Clean::get_instance()->get_helper_plugin() ) {
 						$template = $hp->get_template();
 					}
@@ -151,7 +151,7 @@ if ( ! class_exists('Halftheory_Helper_Pages_To_Categories', false) ) :
                 'before_page_number' => '<span class="meta-nav screen-reader-text">' . __('Page') . '</span>',
             );
             the_posts_pagination( apply_filters('halftheory_helper_pages_to_categories_pagination_args', $args) );
-			if ( class_exists('Halftheory_Clean', false) ) {
+			if ( method_exists('Halftheory_Clean', 'get_helper_infinite_scroll') ) {
 	            if ( $helper = Halftheory_Clean::get_instance()->get_helper_infinite_scroll() ) {
 	            	$helper->setup_query();
 	            }

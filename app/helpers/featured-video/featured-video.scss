@@ -1,0 +1,18 @@
+@charset "UTF-8";
+
+div.wp-video {
+    video {
+        background-color: #000;
+    }
+}
+.post-video {
+    > a {
+        display: flex;
+    }
+    video {
+        pointer-events: none;
+        &::-webkit-media-controls {
+            display: none !important;
+        }
+    }
+}

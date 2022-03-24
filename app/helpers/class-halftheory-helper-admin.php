@@ -144,6 +144,7 @@ if ( ! class_exists('Halftheory_Helper_Admin', false) ) :
 
 			add_action('admin_menu', array( $this, 'admin_menu' ), ( 9553 + 10 ));
 			add_action('current_screen', array( $this, 'current_screen' ));
+			add_action('wp_dashboard_setup', array( $this, 'wp_dashboard_setup' ));
 			add_action('wp_update_nav_menu', array( $this, 'wp_update_nav_menu' ), 20, 2);
 			add_filter('heartbeat_settings', array( $this, 'heartbeat_settings' ));
 			add_filter('pre_update_option', array( $this, 'pre_update_option' ), 20, 3);
@@ -320,6 +321,19 @@ if ( ! class_exists('Halftheory_Helper_Admin', false) ) :
 
 		public function current_screen( $current_screen ) {
 			static::$current_screen_id = $current_screen->id;
+		}
+
+		public function wp_dashboard_setup() {
+			$remove = array(
+				'dashboard_browser_nag',
+				'dashboard_php_nag',
+				'dashboard_activity',
+				'dashboard_quick_press',
+				'dashboard_primary',
+			);
+			foreach ( $remove as $value ) {
+				remove_meta_box($value, 'dashboard', 'normal');
+			}
 		}
 
 		public function wp_update_nav_menu( $menu_id, $menu_data = null ) {

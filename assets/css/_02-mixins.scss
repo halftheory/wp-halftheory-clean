@@ -39,7 +39,7 @@
 	}
 	@return $selector;
 }
-$iframe-video: iframes("youtube.com/","vimeo.com/","dailymotion.com/","hulu.com/","collegehumor.com/","facebook.com/plugins/video","screencast.com/","wordpress.tv/","public-api.wordpress.com/");
+$iframe-video: iframes("youtube.com/","vimeo.com/","embed.twitch.tv","dailymotion.com/","hulu.com/","collegehumor.com/","facebook.com/plugins/video","screencast.com/","wordpress.tv/","public-api.wordpress.com/");
 $iframe-audio: iframes("soundcloud.com/","spotify.com/","mixcloud.com/");
 
 // functions
