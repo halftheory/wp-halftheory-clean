@@ -349,6 +349,27 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			return isset($this->helper_plugin) ? $this->helper_plugin : false;
 		}
 
+        protected function setup_helper_shortcode_code() {
+            // Only do this once.
+            if ( isset($this->helper_shortcode_code) ) {
+                return;
+            }
+            if ( ! class_exists('Halftheory_Helper_Shortcode_Code', false) && is_readable(dirname(__FILE__) . '/helpers/class-halftheory-helper-shortcode-code.php') ) {
+                include_once dirname(__FILE__) . '/helpers/class-halftheory-helper-shortcode-code.php';
+            }
+            if ( class_exists('Halftheory_Helper_Shortcode_Code', false) ) {
+                $this->helper_shortcode_code = new Halftheory_Helper_Shortcode_Code();
+            } else {
+                $this->helper_shortcode_code = false;
+            }
+        }
+        public function get_helper_shortcode_code( $load = false ) {
+            if ( $load ) {
+                $this->setup_helper_shortcode_code();
+            }
+            return isset($this->helper_shortcode_code) ? $this->helper_shortcode_code : false;
+        }
+
 		/* install */
 
 		public function activation( $old_theme_name = false, $old_theme_class = false ) {

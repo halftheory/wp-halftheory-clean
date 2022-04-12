@@ -31,6 +31,7 @@ if ( ! class_exists('Halftheory_Clean_Child_Theme', false) && class_exists('Half
 			#parent::setup_helper_minify();
 			#parent::setup_helper_pages_to_categories();
 			#parent::setup_helper_plugin();
+            #parent::setup_helper_shortcode_code();
 		}
 
 		/* actions */
