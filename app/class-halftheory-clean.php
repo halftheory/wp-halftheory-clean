@@ -108,11 +108,17 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			add_action('widgets_init', array( $this, 'widgets_init' ), 20);
 			add_filter('request', array( $this, 'request' ), 20);
 			add_action('template_redirect', array( $this, 'template_redirect' ), 20);
-			add_filter('wp_default_scripts', array( $this, 'wp_default_scripts_remove_jquery_migrate' ));
+			add_filter('wp_default_scripts', array( $this, 'wp_default_scripts' ));
 			add_action('wp_enqueue_scripts', array( $this, 'wp_enqueue_scripts' ), 20);
 			add_action('wp_enqueue_scripts', array( $this, 'wp_enqueue_scripts_slicknav' ), 20);
 
 			$func = function () {
+                if ( is_front_end() ) {
+                    add_filter('should_load_block_editor_scripts_and_styles', '__return_false');
+                    remove_action('wp_enqueue_scripts', 'wp_common_block_scripts_and_styles');
+                    remove_action('wp_enqueue_scripts', 'wp_enqueue_global_styles');
+                    remove_action('wp_footer', 'wp_enqueue_global_styles', 1);
+                }
 				remove_action('wp_head', 'feed_links_extra', 3);
 				remove_action('wp_head', 'rsd_link');
 				remove_action('wp_head', 'wlwmanifest_link');
@@ -149,7 +155,8 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			add_filter('post_type_archive_link', array( $this, 'post_type_archive_link' ), 10, 2);
 			add_filter('wp_get_attachment_url', array( $this, 'wp_get_attachment_url' ), 10, 2);
 			add_action('pre_get_posts', array( $this, 'pre_get_posts' ), 20);
-			add_filter('the_posts', array( $this, 'the_posts' ), 20, 2);
+            add_filter('the_posts', array( $this, 'the_posts' ), 20, 2);
+            add_filter('wp_nav_menu_objects', array( $this, 'wp_nav_menu_objects' ), 20, 2);
 
 			if ( apply_filters(static::$prefix . '_image_size_actions', true) ) {
 				add_filter('big_image_size_threshold', array( $this, 'big_image_size_threshold' ), 10, 4);
@@ -630,12 +637,13 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			}
 		}
 
-		public function wp_default_scripts_remove_jquery_migrate( &$scripts ) {
+		public function wp_default_scripts( &$wp_scripts ) {
 			if ( ! is_front_end() ) {
 				return;
 			}
-			$scripts->remove('jquery');
-			$scripts->add('jquery', false, array( 'jquery-core' ), '3.5.1');
+            // remove jquery migrate.
+			$wp_scripts->remove('jquery');
+			$wp_scripts->add('jquery', false, array( 'jquery-core' ), '3.6.0');
 		}
 		public function wp_enqueue_scripts() {
 			// header.
@@ -644,7 +652,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			}
 			wp_enqueue_style('theme-style', get_stylesheet_uri(), array(), $this->get_theme_version(get_stylesheet_directory() . '/style.css'));
 			// footer.
-			wp_deregister_script('wp-embed');
+            wp_deregister_script('wp-embed');
 		}
 		public function wp_enqueue_scripts_slicknav() {
 			// slicknav.
@@ -1144,6 +1152,41 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			return $posts;
 		}
 
+        public function wp_nav_menu_objects( $sorted_menu_items, $args ) {
+            // Fix bug in wp-includes/nav-menu-template.php.
+            // "Back-compat with wp_page_menu(): add "current_page_parent" to static home page link for any non-page query."
+            // Actually adds unnecessary class to tax, custom post types, etc.
+            if ( empty($sorted_menu_items) ) {
+                return $sorted_menu_items;
+            }
+            global $wp_query;
+            if ( ! empty($wp_query->is_page) ) {
+                return $sorted_menu_items;
+            }
+            $home_page_id = (int) get_option('page_for_posts');
+            if ( empty($home_page_id) ) {
+                return $sorted_menu_items;
+            }
+            foreach ( $sorted_menu_items as $key => &$menu_item ) {
+                if ( property_exists($menu_item, 'classes') && is_array($menu_item->classes) && in_array('current_page_parent', $menu_item->classes, true) ) {
+                    if ( property_exists($menu_item, 'object_id') && $home_page_id === (int) $menu_item->object_id ) {
+                        $go = false;
+                        if ( is_tax() || is_tag() || is_category() ) {
+                            $go = true;
+                        } elseif ( $post_type = $this->get_page_post_type() ) {
+                            if ( ! in_array($post_type, get_post_types(array( 'public' => true, '_builtin' => true ), 'names'), true) ) {
+                                $go = true;
+                            }
+                        }
+                        if ( $go ) {
+                            $menu_item->classes = array_values(array_diff($menu_item->classes, array( 'current_page_parent' )));
+                        }
+                    }
+                }
+            }
+            return $sorted_menu_items;
+        }
+
 		public function big_image_size_threshold( $threshold = 2000, $imagesize = array(), $file = '', $attachment_id = 0 ) {
 			$large = get_option('large_size_w');
 			if ( ! empty($large) && is_numeric($large) ) {
@@ -1587,6 +1630,20 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			static::$cache_blog['page_id'] = (int) $post_id;
 			return (int) $post_id;
 		}
+
+        public function get_page_post_type( $post_type = false ) {
+            if ( array_key_exists('page_post_type', static::$cache_blog) ) {
+                return static::$cache_blog['page_post_type'];
+            }
+            $post_id = $this->get_page_id();
+            if ( ! empty($post_id) && $post_type_tmp = get_post_type($post_id) ) {
+                $post_type = $post_type_tmp;
+            } elseif ( $post_type_tmp = get_post_type() ) {
+                $post_type = $post_type_tmp;
+            }
+            static::$cache_blog['page_post_type'] = $post_type;
+            return $post_type;
+        }
 
 		public function get_theme_version( $file = '' ) {
 			if ( ! isset(static::$cache_blog['wp_get_theme']) ) {
