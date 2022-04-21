@@ -116,6 +116,32 @@ if ( ! class_exists('Halftheory_Helper_Plugin', false) ) :
 
 		/* admin */
 
+        public function admin_notices() {
+            // This provides an easy way of returning notices after forms are submitted, but you must insert the following in the child theme:
+            // add_action('admin_notices', array( $this, 'admin_notices' ));
+            // add_action('network_admin_notices', array( $this, 'admin_notices' ));
+            global $current_screen;
+            if ( empty($current_screen) ) {
+                return;
+            }
+            if ( ! is_object($current_screen) ) {
+                return;
+            }
+            if ( $arr = $this->get_transient(static::$prefix . '_admin_notices') ) {
+                $this->delete_transient(static::$prefix . '_admin_notices');
+                foreach ( $arr as $value ) {
+                    $classes = array( 'notice' );
+                    if ( $value['class'] ) {
+                        $classes[] = 'notice-' . str_replace('notice-', '', $value['class']);
+                    }
+                    if ( $value['is_dismissible'] ) {
+                        $classes[] = 'is-dismissible';
+                    }
+                    echo '<div class="' . esc_attr(implode(' ', $classes)) . '"><p>' . $value['message'] . '</p></div>' . "\n";
+                }
+            }
+        }
+
 		public function admin_menu() {
 			if ( empty(static::$prefix) ) {
 				return;
@@ -243,6 +269,23 @@ if ( ! class_exists('Halftheory_Helper_Plugin', false) ) :
 	 	}
 
 		/* functions */
+
+        public function admin_notice_add( $class = 'success', $message = '', $is_dismissible = null ) {
+            if ( ! isset($this->admin_notices) ) {
+                $this->admin_notices = array();
+            }
+            $this->admin_notices[] = array('class' => $class, 'message' => $message, 'is_dismissible' => $is_dismissible);
+        }
+
+        public function admin_notices_set() {
+            if ( isset($this->admin_notices) ) {
+                if ( ! empty($this->admin_notices) ) {
+                    $this->set_transient(static::$prefix . '_admin_notices', $this->admin_notices, '1 hour');
+                    return;
+                }
+            }
+            $this->delete_transient(static::$prefix . '_admin_notices');
+        }
 
 		private function get_plugin_file() {
 			$res = __FILE__;
