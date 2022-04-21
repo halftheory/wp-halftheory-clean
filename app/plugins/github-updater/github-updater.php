@@ -2,30 +2,18 @@
 // Exit if accessed directly.
 defined('ABSPATH') || exit;
 
-$theme_plugin = 'Halftheory_Clean_Plugin_GitHub_Updater';
+$theme_plugin = 'Halftheory_Clean_Plugin_Git_Updater';
 
-if ( ! class_exists('Halftheory_Clean_Plugin_GitHub_Updater', false) ) :
-    final class Halftheory_Clean_Plugin_GitHub_Updater {
+if ( ! class_exists('Halftheory_Clean_Plugin_Git_Updater', false) ) :
+    final class Halftheory_Clean_Plugin_Git_Updater {
 
         private $plugin_prefix = 'wp-halftheory';
         private $version = 9;
 
-    	public function __construct() {
+        public function __construct() {
             if ( is_admin() && current_user_can('manage_options') ) {
-                $version = '9.9.10';
-                $locations = array(
-                    'git-updater/git-updater.php',
-                    'git-updater/github-updater.php',
-                    'github-updater/github-updater.php',
-                );
-                foreach ( $locations as $location ) {
-                    if ( $tmp = $this->get_plugin_data_field($location, 'Version') ) {
-                        $version = $tmp;
-                        break;
-                    }
-                }
-                list($version_major) = explode('.', $version, 1);
-                $this->version = (int) $version_major;
+                $this->version = $this->get_plugin_version('9.9.10');
+                add_action('current_screen', array( $this, 'current_screen' ));
                 // load different actions.
                 if ( $this->version >= 10 ) {
                     add_action('gu_refresh_transients', array( $this, 'refresh_transients_v10' ));
@@ -38,9 +26,24 @@ if ( ! class_exists('Halftheory_Clean_Plugin_GitHub_Updater', false) ) :
                     add_filter('github_updater_disable_wpcron', '__return_true');
                 }
             }
-    	}
+        }
 
-    	/* actions */
+        /* actions */
+
+        public function current_screen( $current_screen ) {
+            if ( strpos($current_screen->base, 'git-updater') !== false || strpos($current_screen->base, 'github-updater') !== false ) {
+                if ( $this->get_helper_plugin(true) ) {
+                    add_action('admin_notices', array( $this, 'admin_notices' ));
+                    add_action('network_admin_notices', array( $this, 'admin_notices' ));
+                }
+            }
+        }
+
+        public function admin_notices() {
+            if ( $hp = $this->get_helper_plugin() ) {
+                $hp->admin_notices();
+            }
+        }
 
         public function refresh_transients_v10() {
             if ( ! in_array('git-updater/v1', rest_get_server()->get_namespaces(), true) ) {
@@ -63,9 +66,27 @@ if ( ! class_exists('Halftheory_Clean_Plugin_GitHub_Updater', false) ) :
                 if ( $response = rest_do_request($request) ) {
                     $data = $response->get_data();
                 }
-                $data = ob_get_flush();
+                $data = ob_get_clean();
                 if ( ! empty($data) ) {
-                    $res[] = is_string($data) ? $data : wp_json_encode($data);
+                    if ( function_exists('json_to_array') ) {
+                        $tmp = json_to_array($data);
+                    } else {
+                        $tmp = json_decode($data, true);
+                    }
+                    if ( is_array($tmp) ) {
+                        if ( array_key_exists('data', $tmp) ) {
+                            $res[ 'Plugin::' . $plugin ] = $tmp;
+                        } else {
+                            foreach ( $tmp as $value ) {
+                                if ( array_key_exists('data', $value) ) {
+                                    if ( isset($value['data']['messages']) && ! empty($value['data']['messages']) ) {
+                                        $res[ 'Plugin::' . $plugin ] = $value;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
             $request->set_param('plugin', null);
@@ -78,20 +99,34 @@ if ( ! class_exists('Halftheory_Clean_Plugin_GitHub_Updater', false) ) :
                 if ( $response = rest_do_request($request) ) {
                     $data = $response->get_data();
                 }
-                $data = ob_get_flush();
+                $data = ob_get_clean();
                 if ( ! empty($data) ) {
-                    $res[] = is_string($data) ? $data : wp_json_encode($data);
+                    if ( function_exists('json_to_array') ) {
+                        $tmp = json_to_array($data);
+                    } else {
+                        $tmp = json_decode($data, true);
+                    }
+                    if ( is_array($tmp) ) {
+                        if ( array_key_exists('data', $tmp) ) {
+                            $res[ 'Theme::' . $theme ] = $tmp;
+                        } else {
+                            foreach ( $tmp as $value ) {
+                                if ( array_key_exists('data', $value) ) {
+                                    if ( isset($value['data']['messages']) && ! empty($value['data']['messages']) ) {
+                                        $res[ 'Theme::' . $theme ] = $value;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
             remove_filter('wp_doing_ajax', array( $this, 'wp_doing_ajax' ));
             remove_filter('wp_die_ajax_handler', array( $this, 'wp_die_ajax_handler' ));
 
-            if ( ! empty($res) ) {
-                $res = array_map('esc_html', $res);
-                echo implode("<br />\n", $res);
-                exit;
-            }
+            $this->display_results($res);
         }
 
         public function refresh_transients_v9() {
@@ -115,9 +150,27 @@ if ( ! class_exists('Halftheory_Clean_Plugin_GitHub_Updater', false) ) :
                 if ( $response = rest_do_request($request) ) {
                     $data = $response->get_data();
                 }
-                $data = ob_get_flush();
+                $data = ob_get_clean();
                 if ( ! empty($data) ) {
-                    $res[] = is_string($data) ? $data : wp_json_encode($data);
+                    if ( function_exists('json_to_array') ) {
+                        $tmp = json_to_array($data);
+                    } else {
+                        $tmp = json_decode($data, true);
+                    }
+                    if ( is_array($tmp) ) {
+                        if ( array_key_exists('data', $tmp) ) {
+                            $res[ 'Plugin::' . $plugin ] = $tmp;
+                        } else {
+                            foreach ( $tmp as $value ) {
+                                if ( array_key_exists('data', $value) ) {
+                                    if ( isset($value['data']['messages']) && ! empty($value['data']['messages']) ) {
+                                        $res[ 'Plugin::' . $plugin ] = $value;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
             $request->set_param('plugin', null);
@@ -130,20 +183,34 @@ if ( ! class_exists('Halftheory_Clean_Plugin_GitHub_Updater', false) ) :
                 if ( $response = rest_do_request($request) ) {
                     $data = $response->get_data();
                 }
-                $data = ob_get_flush();
+                $data = ob_get_clean();
                 if ( ! empty($data) ) {
-                    $res[] = is_string($data) ? $data : wp_json_encode($data);
+                    if ( function_exists('json_to_array') ) {
+                        $tmp = json_to_array($data);
+                    } else {
+                        $tmp = json_decode($data, true);
+                    }
+                    if ( is_array($tmp) ) {
+                        if ( array_key_exists('data', $tmp) ) {
+                            $res[ 'Theme::' . $theme ] = $tmp;
+                        } else {
+                            foreach ( $tmp as $value ) {
+                                if ( array_key_exists('data', $value) ) {
+                                    if ( isset($value['data']['messages']) && ! empty($value['data']['messages']) ) {
+                                        $res[ 'Theme::' . $theme ] = $value;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
             remove_filter('wp_doing_ajax', array( $this, 'wp_doing_ajax' ));
             remove_filter('wp_die_ajax_handler', array( $this, 'wp_die_ajax_handler' ));
 
-            if ( ! empty($res) ) {
-                $res = array_map('esc_html', $res);
-                echo implode("<br />\n", $res);
-                exit;
-            }
+            $this->display_results($res);
         }
 
         public function refresh_transients_v8() {
@@ -192,7 +259,7 @@ if ( ! class_exists('Halftheory_Clean_Plugin_GitHub_Updater', false) ) :
             foreach ( $this->get_plugins() as $plugin ) {
                 $url = add_query_arg(array( 'plugin' => rawurlencode($plugin) ), $api_url);
                 if ( $str = $func_get_url($url) ) {
-                    $res[] = $str;
+                    $res[ 'Plugin::' . $plugin ] = $str;
                 }
             }
 
@@ -200,15 +267,11 @@ if ( ! class_exists('Halftheory_Clean_Plugin_GitHub_Updater', false) ) :
             foreach ( $this->get_themes() as $theme ) {
                 $url = add_query_arg(array( 'theme' => rawurlencode($theme) ), $api_url);
                 if ( $str = $func_get_url($url) ) {
-                    $res[] = $str;
+                    $res[ 'Theme::' . $theme ] = $str;
                 }
             }
 
-            if ( ! empty($res) ) {
-                $res = array_map('esc_html', $res);
-                echo implode("<br />\n", $res);
-                exit;
-            }
+            $this->display_results($res);
         }
 
         public function wp_doing_ajax() {
@@ -220,6 +283,41 @@ if ( ! class_exists('Halftheory_Clean_Plugin_GitHub_Updater', false) ) :
         }
 
         /* functions */
+
+        private function get_helper_plugin( $load = false ) {
+            if ( method_exists('Halftheory_Clean', 'get_helper_plugin') ) {
+                if ( $hp = Halftheory_Clean::get_instance()->get_helper_plugin($load) ) {
+                    return $hp;
+                }
+            }
+            return false;
+        }
+
+        private function get_plugin_version( $version = null ) {
+            $locations = array(
+                'git-updater/git-updater.php',
+                'git-updater/github-updater.php',
+                'github-updater/github-updater.php',
+            );
+            $tmp = null;
+            $hp = $this->get_helper_plugin();
+            foreach ( $locations as $location ) {
+                if ( $hp ) {
+                    $tmp = $hp->get_plugin_data_field($location, 'Version');
+                } else {
+                    $tmp = $this->get_plugin_data_field($location, 'Version');
+                }
+                if ( $tmp ) {
+                    $version = $tmp;
+                    break;
+                }
+            }
+            if ( $version ) {
+                list($version_major) = explode('.', $version, 1);
+                $version = (int) $version_major;
+            }
+            return $version;
+        }
 
         private function get_plugins() {
             // ensure get_plugins() function is available.
@@ -268,6 +366,37 @@ if ( ! class_exists('Halftheory_Clean_Plugin_GitHub_Updater', false) ) :
             // condition for updating or ignoring theme.
             $res = strpos($theme, $this->plugin_prefix) === false ? false : true;
             return apply_filters('halftheory_ghu_refresh_transients_theme', $res, $theme);
+        }
+
+        private function display_results( $res ) {
+            if ( empty($res) ) {
+                return;
+            }
+            if ( $hp = $this->get_helper_plugin(true) ) {
+                foreach ( $res as $key => $value ) {
+                    $class = is_array($value) && array_key_exists('success', $value) && ! empty($value['success']) ? 'success' : 'error';
+                    $message = '<strong>' . $key . '</strong>';
+                    if ( is_array($value) && isset($value['data']['messages']) ) {
+                        if ( is_array($value['data']['messages']) ) {
+                            $value['data']['messages'] = array_filter(array_values($value['data']['messages']));
+                            $k = count($value['data']['messages']) - 1;
+                            $message .= ' - ' . $value['data']['messages'][ $k ];
+                        } elseif ( is_string($value['data']['messages']) ) {
+                            $message .= ' - ' . $value['data']['messages'];
+                        }
+                    } elseif ( is_string($value) ) {
+                        $message .= ' - ' . $value;
+                    }
+                    $message = rtrim($message, '.') . '.';
+                    $hp->admin_notice_add($class, $message);
+                }
+                $hp->admin_notices_set();
+            } else {
+                echo "<code>\n";
+                print_r($res);
+                echo "</code>\n";
+                exit;
+            }
         }
 
         /* copied from class-halftheory-helper-plugin.php */
