@@ -9,8 +9,6 @@
 /**
  * WordPress Image Editor Class for Image Manipulation through Gmagick PHP Module
  *
- * @since 3.5.0
- *
  * @see WP_Image_Editor
  */
 class WP_Image_Editor_Gmagick extends WP_Image_Editor {
@@ -32,16 +30,10 @@ class WP_Image_Editor_Gmagick extends WP_Image_Editor {
 	/**
 	 * Checks to see if current environment supports Gmagick.
 	 *
-	 * We require Gmagick 2.2.0 or greater, based on whether the queryformats()
-	 * method can be called statically.
-	 *
-	 * @since 3.5.0
-	 *
 	 * @param array $args
 	 * @return bool
 	 */
 	public static function test( $args = array() ) {
-
 		// First, test Gmagick's extension and classes.
 		if ( ! extension_loaded( 'gmagick' ) || ! class_exists( 'Gmagick', false ) || ! class_exists( 'GmagickPixel', false ) ) {
 			return false;
@@ -51,47 +43,63 @@ class WP_Image_Editor_Gmagick extends WP_Image_Editor {
 			return false;
 		}
 
+        // Now, test for deep requirements within Gmagick.
+        if ( ! defined( 'gmagick::COMPRESSION_JPEG' ) ) {
+            return false;
+        }
+
 		$required_methods = array(
 			'clear',
+            'cropimage',
 			'destroy',
-			//'valid', // maybe still present?
+            'flipimage',
+            'flopimage',
 			'getimage',
-			'writeimage',
 			'getimageblob',
+            'getimageformat',
 			'getimagegeometry',
-			'getimageformat',
-			'setimageformat',
-			'setimagecompression',
-			//'setimagecompressionquality', // replaced by setcompressionquality.
+            'readimage',
+            'readimageblob',
+            'rotateimage',
+            'scaleimage',
             'setcompressionquality',
+            'setimagecompression',
+			'setimageformat',
+            'setimageoption',
             'setimagepage',
-			//'setoption', // maybe still present?
-			'scaleimage',
-			'cropimage',
-			'rotateimage',
-			'flipimage',
-			'flopimage',
-			'readimage',
-			'readimageblob',
+            'writeimage',
 		);
-
-		// Now, test for deep requirements within Gmagick.
-		if ( ! defined( 'gmagick::COMPRESSION_JPEG' ) ) {
-			return false;
-		}
 
 		$class_methods = array_map( 'strtolower', get_class_methods( 'Gmagick' ) );
 		if ( array_diff( $required_methods, $class_methods ) ) {
 			return false;
 		}
 
+        // Test for: Uncaught GmagickException: Unable to load module.
+        $arr = array(
+            ABSPATH . WPINC . '/images/blank.gif',
+            ABSPATH . WPINC . '/images/w-logo-blue.png',
+        );
+        foreach ( $arr as $value ) {
+            if ( file_exists($value) ) {
+                try {
+                    $gm = new Gmagick();
+                    $gm->readimage($value);
+                    $gm->clear();
+                    $gm->destroy();
+                } catch ( Exception $e ) {
+                    return false;
+                }
+            } else {
+                return false;
+            }
+        }
+
 		return true;
 	}
 
 	/**
 	 * Checks to see if editor supports the mime-type specified.
-	 *
-	 * @since 3.5.0
 	 *
 	 * @param string $mime_type
 	 * @return bool
@@ -130,8 +138,6 @@ class WP_Image_Editor_Gmagick extends WP_Image_Editor {
 	/**
 	 * Loads image from $this->file into new Gmagick Object.
 	 *
-	 * @since 3.5.0
-	 *
 	 * @return true|WP_Error True if loaded; WP_Error on failure.
 	 */
 	public function load() {
@@ -168,10 +174,6 @@ class WP_Image_Editor_Gmagick extends WP_Image_Editor {
 				}
 			}
 
-			if ( ! $this->image->valid() ) {
-				return new WP_Error( 'invalid_image', __( 'File is not an image.' ), $this->file );
-			}
-
 			// Select the first frame to handle animated images properly.
 			if ( is_callable( array( $this->image, 'setimageindex' ) ) ) {
 				$this->image->setimageindex( 0 );
@@ -194,8 +196,6 @@ class WP_Image_Editor_Gmagick extends WP_Image_Editor {
 	/**
 	 * Sets Image Compression quality on a 1-100% scale.
 	 *
-	 * @since 3.5.0
-	 *
 	 * @param int $quality Compression Quality. Range: [1,100]
 	 * @return true|WP_Error True if set successfully; WP_Error on failure.
 	 */
@@ -210,22 +210,22 @@ class WP_Image_Editor_Gmagick extends WP_Image_Editor {
 		try {
 			switch ( $this->mime_type ) {
 				case 'image/jpeg':
-					$this->image->setCompressionQuality( $quality );
-					//$this->image->setImageCompression( gmagick::COMPRESSION_JPEG );
+					$this->image->setcompressionquality( $quality );
+					$this->image->setimagecompression( gmagick::COMPRESSION_JPEG );
 					break;
 				case 'image/webp':
 					$webp_info = wp_get_webp_info( $this->file );
 
 					if ( 'lossless' === $webp_info['type'] ) {
 						// Use WebP lossless settings.
-						$this->image->setCompressionQuality( 100 );
-						$this->image->setOption( 'webp:lossless', 'true' );
+						$this->image->setcompressionquality( 100 );
+						$this->image->setimageoption( 'webp:lossless', 'true' );
 					} else {
-						$this->image->setCompressionQuality( $quality );
+						$this->image->setcompressionquality( $quality );
 					}
 					break;
 				default:
-					$this->image->setCompressionQuality( $quality );
+					$this->image->setcompressionquality( $quality );
 			}
 		} catch ( Exception $e ) {
 			return new WP_Error( 'image_quality_error', $e->getMessage() );
@@ -236,8 +236,6 @@ class WP_Image_Editor_Gmagick extends WP_Image_Editor {
 
 	/**
 	 * Sets or updates current image size.
-	 *
-	 * @since 3.5.0
 	 *
 	 * @param int $width
 	 * @param int $height
@@ -261,8 +259,6 @@ class WP_Image_Editor_Gmagick extends WP_Image_Editor {
 	 * At minimum, either a height or width must be provided.
 	 * If one of the two is set to null, the resize will
 	 * maintain aspect ratio according to the provided dimension.
-	 *
-	 * @since 3.5.0
 	 *
 	 * @param int|null $max_w Image width.
 	 * @param int|null $max_h Image height.
@@ -299,8 +295,6 @@ class WP_Image_Editor_Gmagick extends WP_Image_Editor {
 	 *
 	 * This is a WordPress specific implementation of Gmagick::thumbnailImage(),
 	 * which resizes an image to given dimensions and removes any associated profiles.
-	 *
-	 * @since 4.5.0
 	 *
 	 * @param int    $dst_w       The destination width.
 	 * @param int    $dst_h       The destination height.
@@ -343,8 +337,6 @@ class WP_Image_Editor_Gmagick extends WP_Image_Editor {
 		 * This filter only applies when resizing using the Gmagick editor since GD
 		 * always strips profiles by default.
 		 *
-		 * @since 4.5.0
-		 *
 		 * @param bool $strip_meta Whether to strip image metadata during resizing. Default true.
 		 */
 		if ( apply_filters( 'image_strip_meta', $strip_meta ) ) {
@@ -373,7 +365,7 @@ class WP_Image_Editor_Gmagick extends WP_Image_Editor {
 			 * settings and retains backward compatibility with pre 4.5 functionality.
 			 */
 			if ( is_callable( array( $this->image, 'resizeimage' ) ) && $filter ) {
-				$this->image->setOption( 'filter:support', '2.0' );
+				$this->image->setimageoption( 'filter:support', '2.0' );
 				$this->image->resizeimage( $dst_w, $dst_h, $filter, 1 );
 			} else {
 				$this->image->scaleimage( $dst_w, $dst_h );
@@ -381,34 +373,18 @@ class WP_Image_Editor_Gmagick extends WP_Image_Editor {
 
 			// Set appropriate quality settings after resizing.
 			if ( 'image/jpeg' === $this->mime_type ) {
-				if ( is_callable( array( $this->image, 'unsharpMaskImage' ) ) ) {
-					$this->image->unsharpMaskImage( 0.25, 0.25, 8, 0.065 );
+				if ( is_callable( array( $this->image, 'unsharpmaskimage' ) ) ) {
+					$this->image->unsharpmaskimage( 0.25, 0.25, 8, 0.065 );
 				}
 
-				$this->image->setOption( 'jpeg:fancy-upsampling', 'off' );
+				$this->image->setimageoption( 'jpeg:fancy-upsampling', 'off' );
 			}
 
 			if ( 'image/png' === $this->mime_type ) {
-				$this->image->setOption( 'png:compression-filter', '5' );
-				$this->image->setOption( 'png:compression-level', '9' );
-				$this->image->setOption( 'png:compression-strategy', '1' );
-				$this->image->setOption( 'png:exclude-chunk', 'all' );
-			}
-
-			/*
-			 * If alpha channel is not defined, set it opaque.
-			 *
-			 * Note that Gmagick::getImageAlphaChannel() is only available if Gmagick
-			 * has been compiled against ImageMagick version 6.4.0 or newer.
-			 */
-			if ( is_callable( array( $this->image, 'getImageAlphaChannel' ) )
-				&& is_callable( array( $this->image, 'setImageAlphaChannel' ) )
-				&& defined( 'Gmagick::ALPHACHANNEL_UNDEFINED' )
-				&& defined( 'Gmagick::ALPHACHANNEL_OPAQUE' )
-			) {
-				if ( $this->image->getImageAlphaChannel() === Gmagick::ALPHACHANNEL_UNDEFINED ) {
-					$this->image->setImageAlphaChannel( Gmagick::ALPHACHANNEL_OPAQUE );
-				}
+				$this->image->setimageoption( 'png:compression-filter', '5' );
+				$this->image->setimageoption( 'png:compression-level', '9' );
+				$this->image->setimageoption( 'png:compression-strategy', '1' );
+				$this->image->setimageoption( 'png:exclude-chunk', 'all' );
 			}
 
 			// Limit the bit depth of resized images to 8 bits per channel.
@@ -436,8 +412,6 @@ class WP_Image_Editor_Gmagick extends WP_Image_Editor {
 	 * As of 5.3.0 the preferred way to do this is with `make_subsize()`. It creates
 	 * the new images one at a time and allows for the meta data to be saved after
 	 * each new image is created.
-	 *
-	 * @since 3.5.0
 	 *
 	 * @param array $sizes {
 	 *     An array of image size data arrays.
@@ -472,8 +446,6 @@ class WP_Image_Editor_Gmagick extends WP_Image_Editor {
 
 	/**
 	 * Create an image sub-size and return the image meta data value for it.
-	 *
-	 * @since 5.3.0
 	 *
 	 * @param array $size_data {
 	 *     Array of size data.
@@ -530,8 +502,6 @@ class WP_Image_Editor_Gmagick extends WP_Image_Editor {
 	/**
 	 * Crops Image.
 	 *
-	 * @since 3.5.0
-	 *
 	 * @param int  $src_x   The start x position to crop from.
 	 * @param int  $src_y   The start y position to crop from.
 	 * @param int  $src_w   The width to crop.
@@ -549,7 +519,7 @@ class WP_Image_Editor_Gmagick extends WP_Image_Editor {
 
 		try {
 			$this->image->cropimage( $src_w, $src_h, $src_x, $src_y );
-			$this->image->setImagePage( $src_w, $src_h, 0, 0 );
+			$this->image->setimagepage( $src_w, $src_h, 0, 0 );
 
 			if ( $dst_w || $dst_h ) {
 				// If destination width/height isn't specified,
@@ -578,8 +548,6 @@ class WP_Image_Editor_Gmagick extends WP_Image_Editor {
 	/**
 	 * Rotates current image counter-clockwise by $angle.
 	 *
-	 * @since 3.5.0
-	 *
 	 * @param float $angle
 	 * @return true|WP_Error
 	 */
@@ -591,18 +559,13 @@ class WP_Image_Editor_Gmagick extends WP_Image_Editor {
 		try {
 			$this->image->rotateimage( new GmagickPixel( 'none' ), 360 - $angle );
 
-			// Normalise EXIF orientation data so that display is consistent across devices.
-			if ( is_callable( array( $this->image, 'setImageOrientation' ) ) && defined( 'Gmagick::ORIENTATION_TOPLEFT' ) ) {
-				$this->image->setImageOrientation( Gmagick::ORIENTATION_TOPLEFT );
-			}
-
 			// Since this changes the dimensions of the image, update the size.
 			$result = $this->update_size();
 			if ( is_wp_error( $result ) ) {
 				return $result;
 			}
 
-			$this->image->setImagePage( $this->size['width'], $this->size['height'], 0, 0 );
+			$this->image->setimagepage( $this->size['width'], $this->size['height'], 0, 0 );
 		} catch ( Exception $e ) {
 			return new WP_Error( 'image_rotate_error', $e->getMessage() );
 		}
@@ -612,8 +575,6 @@ class WP_Image_Editor_Gmagick extends WP_Image_Editor {
 
 	/**
 	 * Flips current image.
-	 *
-	 * @since 3.5.0
 	 *
 	 * @param bool $horz Flip along Horizontal Axis
 	 * @param bool $vert Flip along Vertical Axis
@@ -628,11 +589,6 @@ class WP_Image_Editor_Gmagick extends WP_Image_Editor {
 			if ( $vert ) {
 				$this->image->flopimage();
 			}
-
-			// Normalise EXIF orientation data so that display is consistent across devices.
-			if ( is_callable( array( $this->image, 'setImageOrientation' ) ) && defined( 'Gmagick::ORIENTATION_TOPLEFT' ) ) {
-				$this->image->setImageOrientation( Gmagick::ORIENTATION_TOPLEFT );
-			}
 		} catch ( Exception $e ) {
 			return new WP_Error( 'image_flip_error', $e->getMessage() );
 		}
@@ -645,8 +601,6 @@ class WP_Image_Editor_Gmagick extends WP_Image_Editor {
 	 *
 	 * As ImageMagick copies the EXIF data to the flipped/rotated image, proceed only
 	 * if EXIF Orientation can be reset afterwards.
-	 *
-	 * @since 5.3.0
 	 *
 	 * @return bool|WP_Error True if the image was rotated. False if no EXIF data or if the image doesn't need rotation.
 	 *                       WP_Error if error while rotating.
@@ -661,8 +615,6 @@ class WP_Image_Editor_Gmagick extends WP_Image_Editor {
 
 	/**
 	 * Saves current image to file.
-	 *
-	 * @since 3.5.0
 	 *
 	 * @param string $destfilename Optional. Destination filename. Default null.
 	 * @param string $mime_type    Optional. The mime-type. Default null.
@@ -737,8 +689,6 @@ class WP_Image_Editor_Gmagick extends WP_Image_Editor {
 	/**
 	 * Writes an image to a file or stream.
 	 *
-	 * @since 5.6.0
-	 *
 	 * @param Gmagick $image
 	 * @param string  $filename The destination filename or stream URL.
 	 * @return true|WP_Error
@@ -749,7 +699,7 @@ class WP_Image_Editor_Gmagick extends WP_Image_Editor {
 			 * Due to reports of issues with streams with `Gmagick::writeimageFile()` and `Gmagick::writeimage()`, copies the blob instead.
 			 * Checks for exact type due to: https://www.php.net/manual/en/function.file-put-contents.php
 			 */
-			if ( file_put_contents( $filename, $image->getImageBlob() ) === false ) {
+			if ( file_put_contents( $filename, $image->getimageblob() ) === false ) {
 				return new WP_Error(
 					'image_save_error',
 					sprintf(
@@ -787,8 +737,6 @@ class WP_Image_Editor_Gmagick extends WP_Image_Editor {
 	/**
 	 * Streams current image to browser.
 	 *
-	 * @since 3.5.0
-	 *
 	 * @param string $mime_type The mime type of the image.
 	 * @return true|WP_Error True on success, WP_Error object on failure.
 	 */
@@ -801,7 +749,7 @@ class WP_Image_Editor_Gmagick extends WP_Image_Editor {
 
 			// Output stream of image content.
 			header( "Content-Type: $mime_type" );
-			print $this->image->getImageBlob();
+			print $this->image->getimageblob();
 
 			// Reset image to original format.
 			$this->image->setimageformat( $this->get_extension( $this->mime_type ) );
@@ -814,8 +762,6 @@ class WP_Image_Editor_Gmagick extends WP_Image_Editor {
 
 	/**
 	 * Strips all image meta except color profiles from an image.
-	 *
-	 * @since 4.5.0
 	 *
 	 * @return true|WP_Error True if stripping metadata was successful. WP_Error object on error.
 	 */
@@ -877,8 +823,6 @@ class WP_Image_Editor_Gmagick extends WP_Image_Editor {
 	 * Sets up Gmagick for PDF processing.
 	 * Increases rendering DPI and only loads first page.
 	 *
-	 * @since 4.7.0
-	 *
 	 * @return string|WP_Error File to load or WP_Error on failure.
 	 */
 	protected function pdf_setup() {
@@ -900,8 +844,6 @@ class WP_Image_Editor_Gmagick extends WP_Image_Editor {
 	 * Includes a workaround for a bug in Ghostscript 8.70 that prevents processing of some PDF files
 	 * when `use-cropbox` is set.
 	 *
-	 * @since 5.6.0
-	 *
 	 * @return true|WP_Error
 	 */
 	protected function pdf_load_source() {
@@ -914,14 +856,14 @@ class WP_Image_Editor_Gmagick extends WP_Image_Editor {
 		try {
 			// When generating thumbnails from cropped PDF pages, Imagemagick uses the uncropped
 			// area (resulting in unnecessary whitespace) unless the following option is set.
-			$this->image->setOption( 'pdf:use-cropbox', true );
+			$this->image->setimageoption( 'pdf:use-cropbox', true );
 
 			// Reading image after Gmagick instantiation because `setimageresolution`
 			// only applies correctly before the image is read.
 			$this->image->readimage( $filename );
 		} catch ( Exception $e ) {
 			// Attempt to run `gs` without the `use-cropbox` option. See #48853.
-			$this->image->setOption( 'pdf:use-cropbox', false );
+			$this->image->setimageoption( 'pdf:use-cropbox', false );
 
 			$this->image->readimage( $filename );
 		}

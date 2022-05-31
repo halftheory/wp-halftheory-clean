@@ -50,7 +50,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 				return;
 			}
 			$this->plugins = array();
-			$active_plugins = $this->get_active_plugins();
+			$active_plugins = get_active_plugins();
 			if ( empty($active_plugins) ) {
 				return;
 			}
@@ -1264,15 +1264,6 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
         }
 
 		/* functions */
-
-		public function get_active_plugins() {
-			$active_plugins = wp_get_active_and_valid_plugins();
-			if ( is_multisite() ) {
-				$active_sitewide_plugins = wp_get_active_network_plugins();
-				$active_plugins = array_merge($active_plugins, $active_sitewide_plugins);
-			}
-			return $active_plugins;
-		}
 
 	    public function get_attachment_file_path( $attachment_id, $size = null ) {
 	    	$path = '';

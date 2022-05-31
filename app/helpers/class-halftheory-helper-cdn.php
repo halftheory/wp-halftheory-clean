@@ -57,33 +57,21 @@ if ( ! class_exists('Halftheory_Helper_CDN', false) ) :
         		'home_url' => home_url('/'),
         		'theme_directories' => search_theme_directories(),
         		'theme_roots' => get_theme_roots(),
-        		'active_plugins' => array(),
+        		'active_plugins' => function_exists('get_active_plugins') ? get_active_plugins() : wp_get_active_and_valid_plugins(),
         		'helper_plugin' => false,
+                'transient_name_replacements' => 'halftheoryclean_cdn_replacements',
+                'transient_name_json' => 'halftheoryclean_cdn_json',
         	);
             if ( ! is_string(static::$common['theme_roots']) ) {
                 static::$common['theme_roots'] = '/themes';
             }
-            if ( class_exists('Halftheory_Clean', false) ) {
-    			static::$common['active_plugins'] = Halftheory_Clean::get_instance()->get_active_plugins();
-    	    	if ( $hp = Halftheory_Clean::get_instance()->get_helper_plugin() ) {
+            if ( method_exists('Halftheory_Clean', 'get_helper_plugin') ) {
+                if ( $hp = Halftheory_Clean::get_instance()->get_helper_plugin() ) {
     	    		static::$common['helper_plugin'] = $hp;
     				static::$common['transient_name_replacements'] = Halftheory_Clean::get_instance()::$prefix . '_cdn_replacements';
     				static::$common['transient_name_json'] = Halftheory_Clean::get_instance()::$prefix . '_cdn_json';
     				unset($hp);
-    	    	} else {
-                    static::$common['transient_name_replacements'] = 'halftheoryclean_cdn_replacements';
-                    static::$common['transient_name_json'] = 'halftheoryclean_cdn_json';
-                }
-    		} else {
-    			$func = function ( $str ) {
-    				return trailingslashit(WP_PLUGIN_DIR) . $str;
-    			};
-    			if ( ! function_exists('get_plugins') ) {
-    				require_once ABSPATH . 'wp-admin/includes/plugin.php';
-    			}
-    			static::$common['active_plugins'] = array_map($func, array_keys(get_plugins()));
-                static::$common['transient_name_replacements'] = 'halftheoryclean_cdn_replacements';
-                static::$common['transient_name_json'] = 'halftheoryclean_cdn_json';
+    	    	}
     		}
     	}
 

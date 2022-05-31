@@ -10,7 +10,7 @@ if (typeof infinite_scroll === 'object') {
 
 	function containerBottom() {
 		var res;
-		if ($("#"+infinite_scroll.container).length) {
+		if (infinite_scroll.container && $("#"+infinite_scroll.container).length) {
 			res = $("#"+infinite_scroll.container).offset().top + $("#"+infinite_scroll.container).outerHeight() - $(window).height();
 		}
 		else {
@@ -21,34 +21,57 @@ if (typeof infinite_scroll === 'object') {
 
 	function loadPage(pageNumber) {
 		update = false;
+		loaderCreate();
+		$("#"+loaderId).fadeIn('fast');
 		var data = { page: pageNumber };
 		$.extend(data, infinite_scroll.data);
-		$.post({
-			url: infinite_scroll.ajaxurl,
-			data: $.param(data),
-			success: function(html) {
-				loaderCreate();
-				$("#"+loaderId).fadeIn('fast',function(){
-					if ($("#"+infinite_scroll.container).length) {
-						if ($(infinite_scroll.pagination_selector).length) {
-							$(infinite_scroll.pagination_selector+":visible").hide('fast');
-						}
-						$("#"+infinite_scroll.container).append(html).append(function() { container_bottom = containerBottom(); update = true; });
+		$.post(infinite_scroll.ajaxurl, $.param(data))
+			.done(function(html) {
+					var containerElem, paginationLastNode;
+					// get the container.
+					if (infinite_scroll.container && $("#"+infinite_scroll.container).length) {
+						containerElem = $("#"+infinite_scroll.container).first();
 					}
 					else {
-						$('body').append(html).append(function() { container_bottom = containerBottom(); update = true; });
+						containerElem = $("body").first();
 					}
-				}).fadeOut('normal');
-			}
-		});
-		return false;
+					// get the pagination.
+					if (infinite_scroll.pagination_selector && $(infinite_scroll.pagination_selector).length) {
+						$(infinite_scroll.pagination_selector+":visible").hide('fast');
+						if (infinite_scroll.container && $("#"+infinite_scroll.container).length) {
+							paginationLastNode = $("#"+infinite_scroll.container+" > "+infinite_scroll.pagination_selector).last();
+						}
+						else {
+							paginationLastNode = $("body > "+infinite_scroll.pagination_selector).last();
+						}
+						if (!paginationLastNode.length || !paginationLastNode.is(':last-child')) {
+							paginationLastNode = false;
+						}
+					}
+					// insert or append.
+					if (paginationLastNode.length) {
+						paginationLastNode.before(html).before(function() {
+							if (infinite_scroll.pagination_more && pageNumber < infinite_scroll.max) {
+								paginationLastNode.html(infinite_scroll.pagination_more).show('fast');
+							}
+						});
+					}
+					else {
+						containerElem.append(html);
+					}
+					container_bottom = containerBottom();
+			})
+			.always(function() {
+				$("#"+loaderId).fadeOut('normal');
+				update = true;
+			});
 	}
 
 	function loaderCreate() {
 		if ($("#"+loaderId).length) {
 			return;
 		}
-		$('body').append('<div id="'+loaderId+'"><img alt="Loading..." src="'+infinite_scroll.loader+'" /></div>');
+		$("body").append('<div id="'+loaderId+'"><img alt="Loading..." src="'+infinite_scroll.loader+'" /></div>');
 		loaderRotate();
 	}
 
@@ -73,8 +96,9 @@ if (typeof infinite_scroll === 'object') {
 			this.resizeTO = setTimeout(function() {
 				$(this).trigger('resizeEnd');
 			}, 500);
-		}).bind('resizeEnd', function() {
+		}).bind('resizeEnd', function(event) {
 			if (count > infinite_scroll.max) {
+				$(this).unbind(event);
 				return false;
 			}
 			// fires once every 500ms if resized
@@ -88,8 +112,9 @@ if (typeof infinite_scroll === 'object') {
 			this.resizeTO = setTimeout(function() {
 				$(this).trigger('scrollEnd');
 			}, 250);
-		}).bind('scrollEnd', function() {
+		}).bind('scrollEnd', function(event) {
 			if (count > infinite_scroll.max) {
+				$(this).unbind(event);
 				return false;
 			}
 			if (!update) {
@@ -104,6 +129,19 @@ if (typeof infinite_scroll === 'object') {
 			}
 			return true;
 		});//window.scroll
+
+		$("body").on('click', "#infinite-scroll-more", function(event){
+			if (count > infinite_scroll.max) {
+				$(this).unbind(event);
+				return false;
+			}
+			if (!update) {
+				return false;
+			}
+			loadPage(count);
+			count++;
+			return false;
+		});
 
 	});//document.ready
 

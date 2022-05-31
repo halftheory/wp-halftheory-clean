@@ -24,20 +24,17 @@ if ( ! class_exists('Halftheory_Helper_Minify', false) ) :
 			} elseif ( is_admin() ) {
 				return;
 			}
-
 			// not compatible with cache plugins.
-			if ( method_exists('Halftheory_Clean', 'get_active_plugins') ) {
-				$active_plugins = Halftheory_Clean::get_instance()->get_active_plugins();
-				$cache_plugins = array(
-					'w3-total-cache',
-					'wp-optimize',
-					'wp-super-cache',
-				);
-				foreach ( $active_plugins as $plugin ) {
-					foreach ( $cache_plugins as $value ) {
-						if ( strpos($plugin, $value) !== false ) {
-							return;
-						}
+            $active_plugins = function_exists('get_active_plugins') ? get_active_plugins() : wp_get_active_and_valid_plugins();
+			$cache_plugins = array(
+				'w3-total-cache',
+				'wp-optimize',
+				'wp-super-cache',
+			);
+			foreach ( $active_plugins as $plugin ) {
+				foreach ( $cache_plugins as $value ) {
+					if ( strpos($plugin, $value) !== false ) {
+						return;
 					}
 				}
 			}
