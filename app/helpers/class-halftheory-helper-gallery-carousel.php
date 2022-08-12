@@ -28,9 +28,12 @@ if ( ! class_exists('Halftheory_Helper_Gallery_Carousel', false) ) :
 		);
 		public $aspectratio_options = array(
 			'1-1' => '1:1',
-			'4-3' => '4:3',
-			'16-9' => '16:9',
-			'21-9' => '21:9',
+            '4-3' => '4:3',
+            '16-9' => '16:9',
+            '21-9' => '21:9',
+            '3-4' => '3:4',
+            '9-16' => '9:16',
+            '9-21' => '9:21',
 		);
 
 		public function __construct() {
