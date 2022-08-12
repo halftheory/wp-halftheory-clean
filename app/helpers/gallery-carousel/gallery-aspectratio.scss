@@ -6,7 +6,10 @@
         &.gallery-aspectratio-1-1,
         &.gallery-aspectratio-4-3,
         &.gallery-aspectratio-16-9,
-        &.gallery-aspectratio-21-9 {
+        &.gallery-aspectratio-21-9,
+        &.gallery-aspectratio-3-4,
+        &.gallery-aspectratio-9-16,
+        &.gallery-aspectratio-9-21 {
             .gallery-item {
                 .gallery-icon {
                     > a {
@@ -45,6 +48,27 @@
             .gallery-item {
                 .gallery-icon {
                     aspect-ratio: 21/9;
+                }
+            }
+        }
+        &.gallery-aspectratio-3-4 {
+            .gallery-item {
+                .gallery-icon {
+                    aspect-ratio: 3/4;
+                }
+            }
+        }
+        &.gallery-aspectratio-9-16 {
+            .gallery-item {
+                .gallery-icon {
+                    aspect-ratio: 9/16;
+                }
+            }
+        }
+        &.gallery-aspectratio-9-21 {
+            .gallery-item {
+                .gallery-icon {
+                    aspect-ratio: 9/21;
                 }
             }
         }

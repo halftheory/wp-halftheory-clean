@@ -1,6 +1,9 @@
-@supports (aspect-ratio: 1/1) { .gallery.gallery-aspectratio-1-1 .gallery-item .gallery-icon > a, .gallery.gallery-aspectratio-4-3 .gallery-item .gallery-icon > a, .gallery.gallery-aspectratio-16-9 .gallery-item .gallery-icon > a, .gallery.gallery-aspectratio-21-9 .gallery-item .gallery-icon > a { display: inline; }
-  .gallery.gallery-aspectratio-1-1 .gallery-item .gallery-icon img, .gallery.gallery-aspectratio-4-3 .gallery-item .gallery-icon img, .gallery.gallery-aspectratio-16-9 .gallery-item .gallery-icon img, .gallery.gallery-aspectratio-21-9 .gallery-item .gallery-icon img { object-fit: cover; width: 100%; height: 100%; }
+@supports (aspect-ratio: 1/1) { .gallery.gallery-aspectratio-1-1 .gallery-item .gallery-icon > a, .gallery.gallery-aspectratio-4-3 .gallery-item .gallery-icon > a, .gallery.gallery-aspectratio-16-9 .gallery-item .gallery-icon > a, .gallery.gallery-aspectratio-21-9 .gallery-item .gallery-icon > a, .gallery.gallery-aspectratio-3-4 .gallery-item .gallery-icon > a, .gallery.gallery-aspectratio-9-16 .gallery-item .gallery-icon > a, .gallery.gallery-aspectratio-9-21 .gallery-item .gallery-icon > a { display: inline; }
+  .gallery.gallery-aspectratio-1-1 .gallery-item .gallery-icon img, .gallery.gallery-aspectratio-4-3 .gallery-item .gallery-icon img, .gallery.gallery-aspectratio-16-9 .gallery-item .gallery-icon img, .gallery.gallery-aspectratio-21-9 .gallery-item .gallery-icon img, .gallery.gallery-aspectratio-3-4 .gallery-item .gallery-icon img, .gallery.gallery-aspectratio-9-16 .gallery-item .gallery-icon img, .gallery.gallery-aspectratio-9-21 .gallery-item .gallery-icon img { object-fit: cover; width: 100%; height: 100%; }
   .gallery.gallery-aspectratio-1-1 .gallery-item .gallery-icon { aspect-ratio: 1/1; }
   .gallery.gallery-aspectratio-4-3 .gallery-item .gallery-icon { aspect-ratio: 4/3; }
   .gallery.gallery-aspectratio-16-9 .gallery-item .gallery-icon { aspect-ratio: 16/9; }
-  .gallery.gallery-aspectratio-21-9 .gallery-item .gallery-icon { aspect-ratio: 21/9; } }
+  .gallery.gallery-aspectratio-21-9 .gallery-item .gallery-icon { aspect-ratio: 21/9; }
+  .gallery.gallery-aspectratio-3-4 .gallery-item .gallery-icon { aspect-ratio: 3/4; }
+  .gallery.gallery-aspectratio-9-16 .gallery-item .gallery-icon { aspect-ratio: 9/16; }
+  .gallery.gallery-aspectratio-9-21 .gallery-item .gallery-icon { aspect-ratio: 9/21; } }
