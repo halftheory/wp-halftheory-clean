@@ -151,7 +151,9 @@ if ( ! class_exists('Halftheory_Clean_Plugin_Git_Updater', false) ) :
 		}
 
 		public function refresh_transients_v9() {
-			$has_rest = function_exists('has_rest_namespace') ? has_rest_namespace('github-updater/v1') : in_array('github-updater/v1', rest_get_server()->get_namespaces(), true);
+			// TODO.
+			#$has_rest = function_exists('has_rest_namespace') ? has_rest_namespace('github-updater/v1') : in_array('github-updater/v1', rest_get_server()->get_namespaces(), true);
+			$has_rest = in_array('github-updater/v1', rest_get_server()->get_namespaces(), true);
 			if ( ! $has_rest ) {
 				return;
 			}

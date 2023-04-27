@@ -143,13 +143,13 @@ if ( ! function_exists('fix_potential_html_string') ) {
 }
 
 if ( ! function_exists('get_active_plugins') ) {
-    function get_active_plugins() {
-        $plugins = wp_get_active_and_valid_plugins();
-        if ( is_multisite() ) {
-            $plugins = array_merge($plugins, wp_get_active_network_plugins());
-        }
-        return apply_filters('get_active_plugins', $plugins);
-    }
+	function get_active_plugins() {
+		$plugins = wp_get_active_and_valid_plugins();
+		if ( is_multisite() ) {
+			$plugins = array_merge($plugins, wp_get_active_network_plugins());
+		}
+		return apply_filters('get_active_plugins', $plugins);
+	}
 }
 
 if ( ! function_exists('get_current_uri') ) {
@@ -906,9 +906,9 @@ if ( ! function_exists('has_filter_extended') ) {
 	function has_filter_extended( $tag, $function_to_check = false ) {
 		global $wp_filter;
 		if ( ! is_array($wp_filter) ) {
-            return false;
-        }
-        if ( ! isset($wp_filter[ $tag ]) ) {
+			return false;
+		}
+		if ( ! isset($wp_filter[ $tag ]) ) {
 			return false;
 		}
 		$res = $wp_filter[ $tag ]->has_filter($tag, $function_to_check);
@@ -968,26 +968,26 @@ if ( ! function_exists('has_post_video') ) {
 }
 
 if ( ! function_exists('has_rest_namespace') ) {
-    function has_rest_namespace( $namespace ) {
-        $res = false;
-        if ( function_exists('rest_get_server') ) {
-            $arr = rest_get_server()->get_namespaces();
-            if ( is_array($arr) ) {
-                if ( in_array($namespace, $arr, true) ) {
-                    $res = $namespace;
-                } elseif ( strpos($namespace, '/') === false ) {
-                    // try to find only first part of the name.
-                    foreach ( $arr as $value ) {
-                        if ( strpos($value, $namespace . '/') === 0 ) {
-                            $res = $value;
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-        return apply_filters('has_rest_namespace', $res, $namespace);
-    }
+	function has_rest_namespace( $namespace ) {
+		$res = false;
+		if ( function_exists('rest_get_server') ) {
+			$arr = rest_get_server()->get_namespaces();
+			if ( is_array($arr) ) {
+				if ( in_array($namespace, $arr, true) ) {
+					$res = $namespace;
+				} elseif ( strpos($namespace, '/') === false ) {
+					// try to find only first part of the name.
+					foreach ( $arr as $value ) {
+						if ( strpos($value, $namespace . '/') === 0 ) {
+							$res = $value;
+							break;
+						}
+					}
+				}
+			}
+		}
+		return apply_filters('has_rest_namespace', $res, $namespace);
+	}
 }
 
 if ( ! function_exists('in_array_int') ) {
@@ -1420,48 +1420,48 @@ if ( ! function_exists('make_array') ) {
 }
 
 if ( ! function_exists('remove_filter_extended') ) {
-    function remove_filter_extended( $tag, $function_to_check, $priority = 10 ) {
-        global $wp_filter;
-        if ( ! is_array($wp_filter) ) {
-            return false;
-        }
-        if ( ! isset($wp_filter[ $tag ]) ) {
-            return false;
-        }
-        $res = $wp_filter[ $tag ]->remove_filter($tag, $function_to_check, $priority);
-        // check for class names.
-        if ( $res === false && is_array($function_to_check) && count($function_to_check) > 1 ) {
-            // clear the keys.
-            $function_to_check = array_values($function_to_check);
-            if ( is_string($function_to_check[0]) && is_string($function_to_check[1]) && method_exists($function_to_check[0], $function_to_check[1]) && isset($wp_filter[ $tag ]->callbacks[ $priority ]) ) {
-                foreach ( $wp_filter[ $tag ]->callbacks[ $priority ] as $function_key => $callback ) {
-                    if ( ! is_array($callback) ) {
-                        continue;
-                    }
-                    if ( ! isset($callback['function']) ) {
-                        continue;
-                    }
-                    if ( ! is_array($callback['function']) ) {
-                        continue;
-                    }
-                    if ( count($callback['function']) < 2 ) {
-                        continue;
-                    }
-                    if ( is_object($callback['function'][0]) && is_string($callback['function'][1]) ) {
-                        if ( is_a($callback['function'][0], $function_to_check[0]) && $callback['function'][1] === $function_to_check[1] ) {
-                            unset($wp_filter[ $tag ]->callbacks[ $priority ][ $function_key ]);
-                            $res = true;
-                        }
-                    }
-                }
-            }
-        }
-        // remove empty filters.
-        if ( ! $wp_filter[ $tag ]->callbacks ) {
-            unset($wp_filter[ $tag ]);
-        }
-        return $res;
-    }
+	function remove_filter_extended( $tag, $function_to_check, $priority = 10 ) {
+		global $wp_filter;
+		if ( ! is_array($wp_filter) ) {
+			return false;
+		}
+		if ( ! isset($wp_filter[ $tag ]) ) {
+			return false;
+		}
+		$res = $wp_filter[ $tag ]->remove_filter($tag, $function_to_check, $priority);
+		// check for class names.
+		if ( $res === false && is_array($function_to_check) && count($function_to_check) > 1 ) {
+			// clear the keys.
+			$function_to_check = array_values($function_to_check);
+			if ( is_string($function_to_check[0]) && is_string($function_to_check[1]) && method_exists($function_to_check[0], $function_to_check[1]) && isset($wp_filter[ $tag ]->callbacks[ $priority ]) ) {
+				foreach ( $wp_filter[ $tag ]->callbacks[ $priority ] as $function_key => $callback ) {
+					if ( ! is_array($callback) ) {
+						continue;
+					}
+					if ( ! isset($callback['function']) ) {
+						continue;
+					}
+					if ( ! is_array($callback['function']) ) {
+						continue;
+					}
+					if ( count($callback['function']) < 2 ) {
+						continue;
+					}
+					if ( is_object($callback['function'][0]) && is_string($callback['function'][1]) ) {
+						if ( is_a($callback['function'][0], $function_to_check[0]) && $callback['function'][1] === $function_to_check[1] ) {
+							unset($wp_filter[ $tag ]->callbacks[ $priority ][ $function_key ]);
+							$res = true;
+						}
+					}
+				}
+			}
+		}
+		// remove empty filters.
+		if ( ! $wp_filter[ $tag ]->callbacks ) {
+			unset($wp_filter[ $tag ]);
+		}
+		return $res;
+	}
 }
 
 if ( ! function_exists('replace_tags') ) {
