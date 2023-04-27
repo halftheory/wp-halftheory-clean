@@ -9,16 +9,16 @@ if ( ! class_exists('Halftheory_Clean_Plugin_Git_Updater', false) ) :
 
 		private $plugin_prefix = 'wp-halftheory';
 		private $version = 9;
-        private $plugin_locations = array(
-            'git-updater/git-updater.php',
-            'git-updater/github-updater.php',
-            'github-updater/github-updater.php',
-        );
+		private $plugin_locations = array(
+			'git-updater/git-updater.php',
+			'git-updater/github-updater.php',
+			'github-updater/github-updater.php',
+		);
 
 		public function __construct() {
 			if ( is_admin() && current_user_can('manage_options') ) {
 				$this->version = $this->get_plugin_version('9.9.10');
-                add_filter('site_transient_update_plugins', array( $this, 'site_transient_update_plugins' ), 20);
+				add_filter('site_transient_update_plugins', array( $this, 'site_transient_update_plugins' ), 20);
 				add_action('current_screen', array( $this, 'current_screen' ));
 				// load different actions.
 				if ( $this->version >= 10 ) {
@@ -38,17 +38,17 @@ if ( ! class_exists('Halftheory_Clean_Plugin_Git_Updater', false) ) :
 
 		/* actions */
 
-        public function site_transient_update_plugins( $value ) {
-            // skip updates for this version.
-            if ( isset($value) && is_object($value) && $this->version === 9 ) {
-                foreach ( $this->plugin_locations as $plugin ) {
-                    if ( isset( $value->response[ $plugin ] ) ) {
-                        unset( $value->response[ $plugin ] );
-                    }
-                }
-            }
-            return $value;
-        }
+		public function site_transient_update_plugins( $value ) {
+			// skip updates for this version.
+			if ( isset($value) && is_object($value) && $this->version === 9 ) {
+				foreach ( $this->plugin_locations as $plugin ) {
+					if ( isset( $value->response[ $plugin ] ) ) {
+						unset( $value->response[ $plugin ] );
+					}
+				}
+			}
+			return $value;
+		}
 
 		public function current_screen( $current_screen ) {
 			if ( strpos($current_screen->base, 'git-updater') !== false || strpos($current_screen->base, 'github-updater') !== false ) {
@@ -66,10 +66,10 @@ if ( ! class_exists('Halftheory_Clean_Plugin_Git_Updater', false) ) :
 		}
 
 		public function refresh_transients_v10() {
-            $has_rest = function_exists('has_rest_namespace') ? has_rest_namespace('git-updater/v1') : in_array('git-updater/v1', rest_get_server()->get_namespaces(), true);
-            if ( ! $has_rest ) {
-                return;
-            }
+			$has_rest = function_exists('has_rest_namespace') ? has_rest_namespace('git-updater/v1') : in_array('git-updater/v1', rest_get_server()->get_namespaces(), true);
+			if ( ! $has_rest ) {
+				return;
+			}
 			$res = array();
 			// force plugins/themes to update using the RESTful endpoints.
 			$request = WP_REST_Request::from_url(get_rest_url() . 'git-updater/v1/update');
@@ -151,10 +151,10 @@ if ( ! class_exists('Halftheory_Clean_Plugin_Git_Updater', false) ) :
 		}
 
 		public function refresh_transients_v9() {
-            $has_rest = function_exists('has_rest_namespace') ? has_rest_namespace('git-updater/v1') : in_array('git-updater/v1', rest_get_server()->get_namespaces(), true);
-            if ( ! $has_rest ) {
-                return;
-            }
+			$has_rest = function_exists('has_rest_namespace') ? has_rest_namespace('github-updater/v1') : in_array('github-updater/v1', rest_get_server()->get_namespaces(), true);
+			if ( ! $has_rest ) {
+				return;
+			}
 			$res = array();
 			// force plugins/themes to update using the RESTful endpoints.
 			$request = WP_REST_Request::from_url(get_rest_url() . 'github-updater/v1/update');
