@@ -971,6 +971,10 @@ if ( ! function_exists('has_rest_namespace') ) {
 	function has_rest_namespace( $namespace ) {
 		$res = false;
 		if ( function_exists('rest_get_server') ) {
+			// wordpress bug.
+			if ( ! class_exists( 'WP_Site_Health' ) ) {
+				require_once ABSPATH . 'wp-admin/includes/class-wp-site-health.php';
+			}
 			$arr = rest_get_server()->get_namespaces();
 			if ( is_array($arr) ) {
 				if ( in_array($namespace, $arr, true) ) {
