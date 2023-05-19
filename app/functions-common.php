@@ -1950,9 +1950,9 @@ if ( ! function_exists('wp_redirect_extended') ) {
 	function wp_redirect_extended( $location, $status = 302, $x_redirect_by = false ) {
 		if ( headers_sent() ) {
 			?>
-	<script type="text/javascript"><!--
-	setTimeout("window.location.href = '<?php echo esc_url($location); ?>'",0);
-	//--></script>
+<script type="text/javascript"><!--
+setTimeout("window.location.href = '<?php echo esc_url($location); ?>'",0);
+//--></script>
 			<?php
 			return true;
 		} elseif ( function_exists('wp_redirect') ) {
@@ -1961,5 +1961,23 @@ if ( ! function_exists('wp_redirect_extended') ) {
 			header('Location: ' . $location, true, $status);
 			return true;
 		}
+	}
+}
+
+if ( ! function_exists('wp_themes_dir') ) {
+	function wp_themes_dir() {
+		if ( ! function_exists('get_theme_root') ) {
+			require_once ABSPATH . 'wp-includes/theme.php';
+		}
+		global $wp_filesystem;
+		if ( is_object( $wp_filesystem ) ) {
+			return $wp_filesystem->wp_themes_dir();
+		}
+		$theme_root = get_theme_root();
+		// Account for relative theme roots.
+		if ( '/themes' === $theme_root || ! is_dir( $theme_root ) ) {
+			$theme_root = WP_CONTENT_DIR . $theme_root;
+		}
+		return $theme_root;
 	}
 }
