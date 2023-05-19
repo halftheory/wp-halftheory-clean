@@ -1969,12 +1969,7 @@ if ( ! function_exists('wp_themes_dir') ) {
 		if ( ! function_exists('get_theme_root') ) {
 			require_once ABSPATH . 'wp-includes/theme.php';
 		}
-		global $wp_filesystem;
-		if ( is_object( $wp_filesystem ) ) {
-			return $wp_filesystem->wp_themes_dir();
-		}
 		$theme_root = get_theme_root();
-		// Account for relative theme roots.
 		if ( '/themes' === $theme_root || ! is_dir( $theme_root ) ) {
 			$theme_root = WP_CONTENT_DIR . $theme_root;
 		}
