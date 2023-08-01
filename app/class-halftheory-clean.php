@@ -66,21 +66,21 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			if ( class_exists('ReflectionClass') ) {
 				foreach ( class_parents($this, false) as $value ) {
 					$obj = new ReflectionClass($value);
-		    		$str = dirname($obj->getFileName());
-		    		if ( is_dir($str . '/plugins') ) {
-		    			$plugins_dirs[] = $str . '/plugins';
-		    		}
+					$str = dirname($obj->getFileName());
+					if ( is_dir($str . '/plugins') ) {
+						$plugins_dirs[] = $str . '/plugins';
+					}
 				}
 			}
 			if ( is_dir(get_template_directory() . '/app/plugins') ) {
 				$plugins_dirs[] = get_template_directory() . '/app/plugins';
 			}
-    		if ( is_dir(dirname(__FILE__) . '/plugins') ) {
-    			$plugins_dirs[] = dirname(__FILE__) . '/plugins';
-    		}
-    		$plugins_dirs = array_unique($plugins_dirs);
-    		$plugins_dirs = array_reverse($plugins_dirs);
-    		// Add the classes.
+			if ( is_dir(dirname(__FILE__) . '/plugins') ) {
+				$plugins_dirs[] = dirname(__FILE__) . '/plugins';
+			}
+			$plugins_dirs = array_unique($plugins_dirs);
+			$plugins_dirs = array_reverse($plugins_dirs);
+			// Add the classes.
 			foreach ( $active_plugins as $plugin ) {
 				foreach ( $plugins_dirs as $dir ) {
 					if ( is_readable($dir . '/' . $plugin) ) {
@@ -103,7 +103,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 
 			add_action('after_setup_theme', array( $this, 'after_setup_theme' ), 20);
 			add_action('rewrite_rules_array', array( $this, 'rewrite_rules_array' ), 20);
-            add_action('init', array( $this, 'init' ), 20);
+			add_action('init', array( $this, 'init' ), 20);
 			add_action('widgets_init', array( $this, 'widgets_init_remove_recent_comments' ), 20);
 			add_action('widgets_init', array( $this, 'widgets_init' ), 20);
 			add_filter('request', array( $this, 'request' ), 20);
@@ -113,12 +113,12 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			add_action('wp_enqueue_scripts', array( $this, 'wp_enqueue_scripts_slicknav' ), 20);
 
 			$func = function () {
-                if ( is_front_end() ) {
-                    add_filter('should_load_block_editor_scripts_and_styles', '__return_false');
-                    remove_action('wp_enqueue_scripts', 'wp_common_block_scripts_and_styles');
-                    remove_action('wp_enqueue_scripts', 'wp_enqueue_global_styles');
-                    remove_action('wp_footer', 'wp_enqueue_global_styles', 1);
-                }
+				if ( is_front_end() ) {
+					add_filter('should_load_block_editor_scripts_and_styles', '__return_false');
+					remove_action('wp_enqueue_scripts', 'wp_common_block_scripts_and_styles'); // contains .screen-reader class.
+					remove_action('wp_enqueue_scripts', 'wp_enqueue_global_styles');
+					remove_action('wp_footer', 'wp_enqueue_global_styles', 1);
+				}
 				remove_action('wp_head', 'feed_links_extra', 3);
 				remove_action('wp_head', 'rsd_link');
 				remove_action('wp_head', 'wlwmanifest_link');
@@ -155,8 +155,8 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			add_filter('post_type_archive_link', array( $this, 'post_type_archive_link' ), 10, 2);
 			add_filter('wp_get_attachment_url', array( $this, 'wp_get_attachment_url' ), 10, 2);
 			add_action('pre_get_posts', array( $this, 'pre_get_posts' ), 20);
-            add_filter('the_posts', array( $this, 'the_posts' ), 20, 2);
-            add_filter('wp_nav_menu_objects', array( $this, 'wp_nav_menu_objects' ), 20, 2);
+			add_filter('the_posts', array( $this, 'the_posts' ), 20, 2);
+			add_filter('wp_nav_menu_objects', array( $this, 'wp_nav_menu_objects' ), 20, 2);
 
 			if ( apply_filters(static::$prefix . '_image_size_actions', true) ) {
 				add_filter('big_image_size_threshold', array( $this, 'big_image_size_threshold' ), 10, 4);
@@ -173,7 +173,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 				add_filter('get_previous_post_sort', array( $this, 'get_adjacent_post_sort' ), 20, 3);
 			}
 
-            add_filter('wp_image_editors', array( $this, 'wp_image_editors' ));
+			add_filter('wp_image_editors', array( $this, 'wp_image_editors' ));
 
 			add_filter('xmlrpc_enabled', '__return_false');
 			add_action('pings_open', '__return_false');
@@ -356,26 +356,26 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			return isset($this->helper_plugin) ? $this->helper_plugin : false;
 		}
 
-        protected function setup_helper_shortcode_code() {
-            // Only do this once.
-            if ( isset($this->helper_shortcode_code) ) {
-                return;
-            }
-            if ( ! class_exists('Halftheory_Helper_Shortcode_Code', false) && is_readable(dirname(__FILE__) . '/helpers/class-halftheory-helper-shortcode-code.php') ) {
-                include_once dirname(__FILE__) . '/helpers/class-halftheory-helper-shortcode-code.php';
-            }
-            if ( class_exists('Halftheory_Helper_Shortcode_Code', false) ) {
-                $this->helper_shortcode_code = new Halftheory_Helper_Shortcode_Code();
-            } else {
-                $this->helper_shortcode_code = false;
-            }
-        }
-        public function get_helper_shortcode_code( $load = false ) {
-            if ( $load ) {
-                $this->setup_helper_shortcode_code();
-            }
-            return isset($this->helper_shortcode_code) ? $this->helper_shortcode_code : false;
-        }
+		protected function setup_helper_shortcode_code() {
+			// Only do this once.
+			if ( isset($this->helper_shortcode_code) ) {
+				return;
+			}
+			if ( ! class_exists('Halftheory_Helper_Shortcode_Code', false) && is_readable(dirname(__FILE__) . '/helpers/class-halftheory-helper-shortcode-code.php') ) {
+				include_once dirname(__FILE__) . '/helpers/class-halftheory-helper-shortcode-code.php';
+			}
+			if ( class_exists('Halftheory_Helper_Shortcode_Code', false) ) {
+				$this->helper_shortcode_code = new Halftheory_Helper_Shortcode_Code();
+			} else {
+				$this->helper_shortcode_code = false;
+			}
+		}
+		public function get_helper_shortcode_code( $load = false ) {
+			if ( $load ) {
+				$this->setup_helper_shortcode_code();
+			}
+			return isset($this->helper_shortcode_code) ? $this->helper_shortcode_code : false;
+		}
 
 		/* install */
 
@@ -454,43 +454,43 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 
 		public function rewrite_rules_array( $rules ) {
 			if ( is_front_end() ) {
-			    return $rules;
+				return $rules;
 			}
-		    global $wp_rewrite;
-		    $remove_endpoints = array(
-		    	'trackback/?$',
-		    	'embed/?$',
-		    	$wp_rewrite->comments_pagination_base,
-		    );
-		    $remove_startpoints = array(
-		    	$wp_rewrite->author_base,
-		    	$wp_rewrite->comments_base,
-		    );
-		    foreach ( $rules as $key => $value ) {
-		    	$remove = false;
-		    	foreach ( $remove_endpoints as $point ) {
-			    	if ( strpos($key, $point) !== false ) {
-			    		$remove = true;
-			    		break;
-			    	}
-		    	}
-		    	if ( $remove ) {
-			    	unset($rules[ $key ]);
-			    	continue;
-		    	}
-		    	foreach ( $remove_startpoints as $point ) {
-			    	if ( preg_match("/^$point/", $key) ) {
-			    		$remove = true;
-			    		break;
-			    	}
-			    }
-		    	if ( $remove ) {
-			    	unset($rules[ $key ]);
-			    	continue;
-		    	}
-		    }
+			global $wp_rewrite;
+			$remove_endpoints = array(
+				'trackback/?$',
+				'embed/?$',
+				$wp_rewrite->comments_pagination_base,
+			);
+			$remove_startpoints = array(
+				$wp_rewrite->author_base,
+				$wp_rewrite->comments_base,
+			);
+			foreach ( $rules as $key => $value ) {
+				$remove = false;
+				foreach ( $remove_endpoints as $point ) {
+					if ( strpos($key, $point) !== false ) {
+						$remove = true;
+						break;
+					}
+				}
+				if ( $remove ) {
+					unset($rules[ $key ]);
+					continue;
+				}
+				foreach ( $remove_startpoints as $point ) {
+					if ( preg_match("/^$point/", $key) ) {
+						$remove = true;
+						break;
+					}
+				}
+				if ( $remove ) {
+					unset($rules[ $key ]);
+					continue;
+				}
+			}
 			#print_r($rules);
-		    return $rules;
+			return $rules;
 		}
 
 		public function init() {
@@ -505,7 +505,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 		public function widgets_init_remove_recent_comments() {
 			// Remove recent comments widget.
 			global $wp_widget_factory;
-	 		remove_action('wp_head', array( $wp_widget_factory->widgets['WP_Widget_Recent_Comments'], 'recent_comments_style' ));
+			remove_action('wp_head', array( $wp_widget_factory->widgets['WP_Widget_Recent_Comments'], 'recent_comments_style' ));
 			unregister_widget('WP_Widget_Recent_Comments');
 		}
 
@@ -641,9 +641,9 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			if ( ! is_front_end() ) {
 				return;
 			}
-            // remove jquery migrate.
+			// remove jquery migrate.
 			$wp_scripts->remove('jquery');
-			$wp_scripts->add('jquery', false, array( 'jquery-core' ), '3.6.0');
+			$wp_scripts->add('jquery', false, array( 'jquery-core' ), '3.6.4');
 		}
 		public function wp_enqueue_scripts() {
 			// header.
@@ -652,12 +652,12 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			}
 			wp_enqueue_style('theme-style', get_stylesheet_uri(), array(), $this->get_theme_version(get_stylesheet_directory() . '/style.css'));
 			// footer.
-            wp_deregister_script('wp-embed');
+			wp_deregister_script('wp-embed');
 		}
 		public function wp_enqueue_scripts_slicknav() {
 			// slicknav.
 			if ( has_nav_menu('primary-menu') ) {
-		        wp_enqueue_style('dashicons');
+				wp_enqueue_style('dashicons');
 				// header.
 				wp_enqueue_style('slicknav', get_template_directory_uri() . '/assets/js/slicknav/slicknav' . ( ! ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) ? '.min' : '' ) . '.css', array(), '1.0.7', 'screen');
 				wp_enqueue_style('slicknav-init', get_template_directory_uri() . '/assets/js/slicknav/slicknav-init.css', array( 'slicknav' ), $this->get_theme_version(get_template_directory() . '/assets/js/slicknav/slicknav-init.css'), 'screen');
@@ -665,7 +665,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 				wp_enqueue_script('slicknav', get_template_directory_uri() . '/assets/js/slicknav/jquery.slicknav' . ( ! ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) ? '.min' : '' ) . '.js', array( 'jquery' ), '1.0.7', true);
 				wp_enqueue_script('slicknav-init', get_template_directory_uri() . '/assets/js/slicknav/slicknav-init.js', array( 'jquery', 'slicknav' ), $this->get_theme_version(get_template_directory() . '/assets/js/slicknav/slicknav-init.js'), true);
 				$data = array(
-				    'brand' => '<a href="' . esc_url(network_home_url('/')) . '">' . get_bloginfo('name') . '</a>',
+					'brand' => '<a href="' . esc_url(network_home_url('/')) . '">' . get_bloginfo('name') . '</a>',
 				);
 				wp_localize_script('slicknav-init', 'slicknav', $data);
 			}
@@ -726,7 +726,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 				(array) get_bloginfo('description')
 			);
 			$trim_stop = function ( $value ) {
-			    return trim($value, ' .');
+				return trim($value, ' .');
 			};
 			$description = array_map($trim_stop, $description);
 			$description = implode('. ', array_filter( array_unique($description) ) );
@@ -1107,7 +1107,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 		public function post_type_archive_link( $link, $post_type ) {
 			if ( $link === get_home_url() && in_the_loop() ) {
 				// try a parent page.
-        		$path = get_url_path(get_permalink());
+				$path = get_url_path(get_permalink());
 				while ( dirname($path) !== $path ) {
 					if ( $tmp = get_page_by_path($path) ) {
 						$link = get_permalink($tmp);
@@ -1122,8 +1122,8 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 		public function wp_get_attachment_url( $url, $post_ID ) {
 			// fixes bug in 'wp_get_attachment_url' which skips ssl urls when using ajax.
 			if ( is_ssl() && is_front_end() && 'wp-login.php' !== $pagenow ) {
-        		$url = set_url_scheme($url);
-    		}
+				$url = set_url_scheme($url);
+			}
 			return $url;
 		}
 
@@ -1152,40 +1152,40 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			return $posts;
 		}
 
-        public function wp_nav_menu_objects( $sorted_menu_items, $args ) {
-            // Fix bug in wp-includes/nav-menu-template.php.
-            // "Back-compat with wp_page_menu(): add "current_page_parent" to static home page link for any non-page query."
-            // Actually adds unnecessary class to tax, custom post types, etc.
-            if ( empty($sorted_menu_items) ) {
-                return $sorted_menu_items;
-            }
-            global $wp_query;
-            if ( ! empty($wp_query->is_page) ) {
-                return $sorted_menu_items;
-            }
-            $home_page_id = (int) get_option('page_for_posts');
-            if ( empty($home_page_id) ) {
-                return $sorted_menu_items;
-            }
-            foreach ( $sorted_menu_items as $key => &$menu_item ) {
-                if ( property_exists($menu_item, 'classes') && is_array($menu_item->classes) && in_array('current_page_parent', $menu_item->classes, true) ) {
-                    if ( property_exists($menu_item, 'object_id') && $home_page_id === (int) $menu_item->object_id ) {
-                        $go = false;
-                        if ( is_tax() || is_tag() || is_category() ) {
-                            $go = true;
-                        } elseif ( $post_type = $this->get_page_post_type() ) {
-                            if ( ! in_array($post_type, get_post_types(array( 'public' => true, '_builtin' => true ), 'names'), true) ) {
-                                $go = true;
-                            }
-                        }
-                        if ( $go ) {
-                            $menu_item->classes = array_values(array_diff($menu_item->classes, array( 'current_page_parent' )));
-                        }
-                    }
-                }
-            }
-            return $sorted_menu_items;
-        }
+		public function wp_nav_menu_objects( $sorted_menu_items, $args ) {
+			// Fix bug in wp-includes/nav-menu-template.php.
+			// "Back-compat with wp_page_menu(): add "current_page_parent" to static home page link for any non-page query."
+			// Actually adds unnecessary class to tax, custom post types, etc.
+			if ( empty($sorted_menu_items) ) {
+				return $sorted_menu_items;
+			}
+			global $wp_query;
+			if ( ! empty($wp_query->is_page) ) {
+				return $sorted_menu_items;
+			}
+			$home_page_id = (int) get_option('page_for_posts');
+			if ( empty($home_page_id) ) {
+				return $sorted_menu_items;
+			}
+			foreach ( $sorted_menu_items as $key => &$menu_item ) {
+				if ( property_exists($menu_item, 'classes') && is_array($menu_item->classes) && in_array('current_page_parent', $menu_item->classes, true) ) {
+					if ( property_exists($menu_item, 'object_id') && $home_page_id === (int) $menu_item->object_id ) {
+						$go = false;
+						if ( is_tax() || is_tag() || is_category() ) {
+							$go = true;
+						} elseif ( $post_type = $this->get_page_post_type() ) {
+							if ( ! in_array($post_type, get_post_types(array( 'public' => true, '_builtin' => true ), 'names'), true) ) {
+								$go = true;
+							}
+						}
+						if ( $go ) {
+							$menu_item->classes = array_values(array_diff($menu_item->classes, array( 'current_page_parent' )));
+						}
+					}
+				}
+			}
+			return $sorted_menu_items;
+		}
 
 		public function big_image_size_threshold( $threshold = 2000, $imagesize = array(), $file = '', $attachment_id = 0 ) {
 			$large = get_option('large_size_w');
@@ -1249,24 +1249,24 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			return $sort;
 		}
 
-        public function wp_image_editors( $implementations = array() ) {
-            // wp-includes/media.php
-            if ( class_exists('Gmagick', false) ) {
-                if ( ! class_exists('WP_Image_Editor_Gmagick', false) && is_readable(dirname(__FILE__) . '/includes/class-wp-image-editor-gmagick.php') ) {
-                    require_once dirname(__FILE__) . '/includes/class-wp-image-editor-gmagick.php';
-                }
-                if ( class_exists('WP_Image_Editor_Gmagick', false) ) {
-                    $implementations = array_merge(array( 'WP_Image_Editor_Gmagick' ), $implementations);
-                    $implementations = array_unique($implementations);
-                }
-            }
-            return $implementations;
-        }
+		public function wp_image_editors( $implementations = array() ) {
+			// wp-includes/media.php
+			if ( class_exists('Gmagick', false) ) {
+				if ( ! class_exists('WP_Image_Editor_Gmagick', false) && is_readable(dirname(__FILE__) . '/includes/class-wp-image-editor-gmagick.php') ) {
+					require_once dirname(__FILE__) . '/includes/class-wp-image-editor-gmagick.php';
+				}
+				if ( class_exists('WP_Image_Editor_Gmagick', false) ) {
+					$implementations = array_merge(array( 'WP_Image_Editor_Gmagick' ), $implementations);
+					$implementations = array_unique($implementations);
+				}
+			}
+			return $implementations;
+		}
 
 		/* functions */
 
-	    public function get_attachment_file_path( $attachment_id, $size = null ) {
-	    	$path = '';
+		public function get_attachment_file_path( $attachment_id, $size = null ) {
+			$path = '';
 			if ( wp_attachment_is_image($attachment_id) && function_exists('wp_get_original_image_path') ) {
 				// avoids 'scaled' or edited images.
 				$path = wp_get_original_image_path($attachment_id);
@@ -1622,37 +1622,37 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			return (int) $post_id;
 		}
 
-        public function get_page_post_type( $post_type = false ) {
-            if ( array_key_exists('page_post_type', static::$cache_blog) ) {
-                return static::$cache_blog['page_post_type'];
-            }
-            $post_id = $this->get_page_id();
-            if ( ! empty($post_id) && $post_type_tmp = get_post_type($post_id) ) {
-                $post_type = $post_type_tmp;
-            } elseif ( $post_type_tmp = get_post_type() ) {
-                $post_type = $post_type_tmp;
-            }
-            static::$cache_blog['page_post_type'] = $post_type;
-            return $post_type;
-        }
+		public function get_page_post_type( $post_type = false ) {
+			if ( array_key_exists('page_post_type', static::$cache_blog) ) {
+				return static::$cache_blog['page_post_type'];
+			}
+			$post_id = $this->get_page_id();
+			if ( ! empty($post_id) && $post_type_tmp = get_post_type($post_id) ) {
+				$post_type = $post_type_tmp;
+			} elseif ( $post_type_tmp = get_post_type() ) {
+				$post_type = $post_type_tmp;
+			}
+			static::$cache_blog['page_post_type'] = $post_type;
+			return $post_type;
+		}
 
 		public function get_theme_version( $file = '' ) {
 			if ( ! isset(static::$cache_blog['wp_get_theme']) ) {
 				static::$cache_blog['wp_get_theme'] = wp_get_theme();
 			}
-	    	if ( ! ( static::$cache_blog['wp_get_theme'] instanceof WP_Theme ) ) {
-	    		if ( is_file($file) && file_exists($file) ) {
-	    			return filemtime($file);
-	    		}
-	    		return null;
-	    	}
-	    	// maybe parent theme?
-	    	if ( is_file($file) && file_exists($file) && is_child_theme() ) {
-	    		if ( strpos($file, get_template_directory()) !== false ) {
-		    		return static::$cache_blog['wp_get_theme']->parent()->get('Version');
-		    	}
-	    	}
-	    	return static::$cache_blog['wp_get_theme']->get('Version');
+			if ( ! ( static::$cache_blog['wp_get_theme'] instanceof WP_Theme ) ) {
+				if ( is_file($file) && file_exists($file) ) {
+					return filemtime($file);
+				}
+				return null;
+			}
+			// maybe parent theme?
+			if ( is_file($file) && file_exists($file) && is_child_theme() ) {
+				if ( strpos($file, get_template_directory()) !== false ) {
+					return static::$cache_blog['wp_get_theme']->parent()->get('Version');
+				}
+			}
+			return static::$cache_blog['wp_get_theme']->get('Version');
 		}
 
 		public function get_custom_logo( $context = 'url', $size = 'medium', $attr = '' ) {
@@ -1778,7 +1778,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			$title = get_bloginfo('name');
 			$ancestors = array( get_bloginfo('name') );
 
-	        $post_types_builtin = get_post_types(array( 'public' => true, '_builtin' => true ), 'names');
+			$post_types_builtin = get_post_types(array( 'public' => true, '_builtin' => true ), 'names');
 
 			// posts - use the post_id.
 			if ( ! empty($post_id) && $post = get_post($post_id) ) {
@@ -1792,9 +1792,9 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 					}
 				} else {
 					// maybe custom post types?
-			        if ( ! in_array($post->post_type, $post_types_builtin, true) && $obj = get_post_type_object($post->post_type) ) {
-			        	$ancestors[] = apply_filters('post_type_archive_title', $obj->labels->name, $post->post_type);
-			        } else {
+					if ( ! in_array($post->post_type, $post_types_builtin, true) && $obj = get_post_type_object($post->post_type) ) {
+						$ancestors[] = apply_filters('post_type_archive_title', $obj->labels->name, $post->post_type);
+					} else {
 						// or taxonomies?
 						$taxonomy_objects = get_object_taxonomies($post->post_type, 'objects');
 						if ( ! empty($taxonomy_objects) ) {
@@ -1861,7 +1861,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 								$done[] = 'is_post_type_archive';
 							} elseif ( $post_type = get_query_var('post_type', false) ) {
 								if ( ! in_array($post_type, $post_types_builtin, true) && $obj = get_post_type_object($post_type) ) {
-					        		$title[] = apply_filters('post_type_archive_title', $obj->labels->name, $post_type);
+									$title[] = apply_filters('post_type_archive_title', $obj->labels->name, $post_type);
 									$done[] = 'post_type';
 								}
 							}
@@ -1928,7 +1928,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 					}
 					if ( $post_type = get_query_var('post_type', false) && ! in_array('post_type', $done, true) ) {
 						if ( ! in_array($post_type, $post_types_builtin, true) && $obj = get_post_type_object($post_type) ) {
-			        		$title[] = apply_filters('post_type_archive_title', $obj->labels->name, $post_type);
+							$title[] = apply_filters('post_type_archive_title', $obj->labels->name, $post_type);
 							$done[] = 'post_type';
 						}
 					}
@@ -2106,7 +2106,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 													// remove size suffix.
 													$guid = preg_replace("/\-[0-9]+x[0-9]+(\.[\w]+)$/s", '$1', $matches[1][0]);
 													global $wpdb;
-												    $query = "SELECT ID FROM $wpdb->posts WHERE guid = '" . $guid . "' AND post_type = 'attachment'";
+													$query = "SELECT ID FROM $wpdb->posts WHERE guid = '" . $guid . "' AND post_type = 'attachment'";
 													$sql = $wpdb->get_col($query);
 													if ( ! empty($sql) ) {
 														$image_id = (int) $sql[0];
