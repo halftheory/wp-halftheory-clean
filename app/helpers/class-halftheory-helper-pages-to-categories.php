@@ -10,6 +10,7 @@ halftheory_helper_pages_to_categories_pagination_args
 defined('ABSPATH') || exit;
 
 if ( ! class_exists('Halftheory_Helper_Pages_To_Categories', false) ) :
+	#[AllowDynamicProperties]
 	class Halftheory_Helper_Pages_To_Categories {
 
 		public $post_type = 'page';
@@ -37,8 +38,8 @@ if ( ! class_exists('Halftheory_Helper_Pages_To_Categories', false) ) :
 		}
 
 		public function wp_nav_menu_objects( $sorted_menu_items, $args ) {
-			if ( function_exists('is_front_end') ) {
-				if ( ! is_front_end() ) {
+			if ( function_exists('is_public') ) {
+				if ( ! is_public() ) {
 					return $sorted_menu_items;
 				}
 			}
@@ -69,8 +70,8 @@ if ( ! class_exists('Halftheory_Helper_Pages_To_Categories', false) ) :
 		}
 
 		public function loop_end( $wp_query ) {
-			if ( function_exists('is_front_end') ) {
-				if ( ! is_front_end() ) {
+			if ( function_exists('is_public') ) {
+				if ( ! is_public() ) {
 					return;
 				}
 			}
@@ -163,8 +164,8 @@ if ( ! class_exists('Halftheory_Helper_Pages_To_Categories', false) ) :
 		/* actions - admin */
 
 		public function admin_print_styles() {
-			if ( function_exists('is_front_end') ) {
-				if ( is_front_end() ) {
+			if ( function_exists('is_public') ) {
+				if ( is_public() ) {
 					return;
 				}
 			}
@@ -185,14 +186,14 @@ if ( ! class_exists('Halftheory_Helper_Pages_To_Categories', false) ) :
 			$label = is_object($tax) ? $tax->labels->singular_name : ucfirst($this->taxonomy);
 			?><style type="text/css">
 table tr.pagestocategories-parent { background-color: #f0f0f1 !important; }
-table tr.pagestocategories-parent td.title a.row-title:after { content: " (<?php echo $label; ?>)"; font-size: 85%; }
+table tr.pagestocategories-parent td.title a.row-title:after { content: " (<?php echo esc_html($label); ?>)"; font-size: 85%; }
 </style>
 			<?php
 		}
 
 		public function post_class( $classes = array(), $class = array(), $post_id = 0 ) {
-			if ( function_exists('is_front_end') ) {
-				if ( is_front_end() ) {
+			if ( function_exists('is_public') ) {
+				if ( is_public() ) {
 					return $classes;
 				}
 			}

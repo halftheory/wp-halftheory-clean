@@ -2,11 +2,12 @@
 // Exit if accessed directly.
 defined('ABSPATH') || exit;
 
-if ( is_readable(dirname(__FILE__) . '/functions-common.php') ) {
-	include_once dirname(__FILE__) . '/functions-common.php';
+if ( is_readable(__DIR__ . '/functions-common.php') ) {
+	include_once __DIR__ . '/functions-common.php';
 }
 
 if ( ! class_exists('Halftheory_Clean', false) ) :
+	#[AllowDynamicProperties]
 	class Halftheory_Clean {
 
 		protected static $instance;
@@ -22,7 +23,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			}
 		}
 
-		final private function __clone() {
+		private function __clone() {
 		}
 
 		final public static function get_instance( $load_actions = false ) {
@@ -75,8 +76,8 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			if ( is_dir(get_template_directory() . '/app/plugins') ) {
 				$plugins_dirs[] = get_template_directory() . '/app/plugins';
 			}
-			if ( is_dir(dirname(__FILE__) . '/plugins') ) {
-				$plugins_dirs[] = dirname(__FILE__) . '/plugins';
+			if ( is_dir(__DIR__ . '/plugins') ) {
+				$plugins_dirs[] = __DIR__ . '/plugins';
 			}
 			$plugins_dirs = array_unique($plugins_dirs);
 			$plugins_dirs = array_reverse($plugins_dirs);
@@ -111,11 +112,14 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			add_filter('wp_default_scripts', array( $this, 'wp_default_scripts' ));
 			add_action('wp_enqueue_scripts', array( $this, 'wp_enqueue_scripts' ), 20);
 			add_action('wp_enqueue_scripts', array( $this, 'wp_enqueue_scripts_slicknav' ), 20);
+			add_action('script_loader_src', array( $this, 'script_loader_src' ), 90, 2);
+			add_action('style_loader_src', array( $this, 'script_loader_src' ), 90, 2);
 
 			$func = function () {
-				if ( is_front_end() ) {
+				if ( is_public() ) {
 					add_filter('should_load_block_editor_scripts_and_styles', '__return_false');
 					remove_action('wp_enqueue_scripts', 'wp_common_block_scripts_and_styles'); // contains .screen-reader class.
+					remove_action('wp_enqueue_scripts', 'wp_enqueue_classic_theme_styles');
 					remove_action('wp_enqueue_scripts', 'wp_enqueue_global_styles');
 					remove_action('wp_footer', 'wp_enqueue_global_styles', 1);
 				}
@@ -151,12 +155,15 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			remove_filter('the_content', 'convert_smilies', 20);
 			remove_filter('get_the_excerpt', 'wp_trim_excerpt', 10);
 			add_filter('get_the_excerpt', array( $this, 'get_the_excerpt' ), 10, 2);
+			add_filter('body_class', array( $this, 'body_class' ), 20, 2);
+			add_filter('post_class', array( $this, 'post_class' ), 20, 3);
 			add_filter('embed_oembed_html', array( $this, 'embed_oembed_html' ), 10, 4);
 			add_filter('post_type_archive_link', array( $this, 'post_type_archive_link' ), 10, 2);
 			add_filter('wp_get_attachment_url', array( $this, 'wp_get_attachment_url' ), 10, 2);
 			add_action('pre_get_posts', array( $this, 'pre_get_posts' ), 20);
 			add_filter('the_posts', array( $this, 'the_posts' ), 20, 2);
 			add_filter('wp_nav_menu_objects', array( $this, 'wp_nav_menu_objects' ), 20, 2);
+			add_filter('safe_style_css', array( $this, 'safe_style_css' ), 20);
 
 			if ( apply_filters(static::$prefix . '_image_size_actions', true) ) {
 				add_filter('big_image_size_threshold', array( $this, 'big_image_size_threshold' ), 10, 4);
@@ -173,7 +180,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 				add_filter('get_previous_post_sort', array( $this, 'get_adjacent_post_sort' ), 20, 3);
 			}
 
-			add_filter('wp_image_editors', array( $this, 'wp_image_editors' ));
+			// add_filter('wp_image_editors', array( $this, 'wp_image_editors' ));
 
 			add_filter('xmlrpc_enabled', '__return_false');
 			add_action('pings_open', '__return_false');
@@ -192,8 +199,8 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 				return;
 			}
 			if ( is_user_logged_in() ) {
-				if ( ! class_exists('Halftheory_Helper_Admin', false) && is_readable(dirname(__FILE__) . '/helpers/class-halftheory-helper-admin.php') ) {
-					include_once dirname(__FILE__) . '/helpers/class-halftheory-helper-admin.php';
+				if ( ! class_exists('Halftheory_Helper_Admin', false) && is_readable(__DIR__ . '/helpers/class-halftheory-helper-admin.php') ) {
+					include_once __DIR__ . '/helpers/class-halftheory-helper-admin.php';
 				}
 				if ( class_exists('Halftheory_Helper_Admin', false) ) {
 					$this->helper_admin = new Halftheory_Helper_Admin();
@@ -214,8 +221,8 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			if ( isset($this->helper_cdn) ) {
 				return;
 			}
-			if ( ! class_exists('Halftheory_Helper_CDN', false) && is_readable(dirname(__FILE__) . '/helpers/class-halftheory-helper-cdn.php') ) {
-				include_once dirname(__FILE__) . '/helpers/class-halftheory-helper-cdn.php';
+			if ( ! class_exists('Halftheory_Helper_CDN', false) && is_readable(__DIR__ . '/helpers/class-halftheory-helper-cdn.php') ) {
+				include_once __DIR__ . '/helpers/class-halftheory-helper-cdn.php';
 			}
 			if ( class_exists('Halftheory_Helper_CDN', false) ) {
 				$this->helper_cdn = new Halftheory_Helper_CDN();
@@ -235,8 +242,8 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			if ( isset($this->helper_featured_video) ) {
 				return;
 			}
-			if ( ! class_exists('Halftheory_Helper_Featured_Video', false) && is_readable(dirname(__FILE__) . '/helpers/class-halftheory-helper-featured-video.php') ) {
-				include_once dirname(__FILE__) . '/helpers/class-halftheory-helper-featured-video.php';
+			if ( ! class_exists('Halftheory_Helper_Featured_Video', false) && is_readable(__DIR__ . '/helpers/class-halftheory-helper-featured-video.php') ) {
+				include_once __DIR__ . '/helpers/class-halftheory-helper-featured-video.php';
 			}
 			if ( class_exists('Halftheory_Helper_Featured_Video', false) ) {
 				$this->helper_featured_video = new Halftheory_Helper_Featured_Video();
@@ -256,8 +263,8 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			if ( isset($this->helper_gallery_carousel) ) {
 				return;
 			}
-			if ( ! class_exists('Halftheory_Helper_Gallery_Carousel', false) && is_readable(dirname(__FILE__) . '/helpers/class-halftheory-helper-gallery-carousel.php') ) {
-				include_once dirname(__FILE__) . '/helpers/class-halftheory-helper-gallery-carousel.php';
+			if ( ! class_exists('Halftheory_Helper_Gallery_Carousel', false) && is_readable(__DIR__ . '/helpers/class-halftheory-helper-gallery-carousel.php') ) {
+				include_once __DIR__ . '/helpers/class-halftheory-helper-gallery-carousel.php';
 			}
 			if ( class_exists('Halftheory_Helper_Gallery_Carousel', false) ) {
 				$this->helper_gallery_carousel = new Halftheory_Helper_Gallery_Carousel();
@@ -277,8 +284,8 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			if ( isset($this->helper_infinite_scroll) ) {
 				return;
 			}
-			if ( ! class_exists('Halftheory_Helper_Infinite_Scroll', false) && is_readable(dirname(__FILE__) . '/helpers/class-halftheory-helper-infinite-scroll.php') ) {
-				include_once dirname(__FILE__) . '/helpers/class-halftheory-helper-infinite-scroll.php';
+			if ( ! class_exists('Halftheory_Helper_Infinite_Scroll', false) && is_readable(__DIR__ . '/helpers/class-halftheory-helper-infinite-scroll.php') ) {
+				include_once __DIR__ . '/helpers/class-halftheory-helper-infinite-scroll.php';
 			}
 			if ( class_exists('Halftheory_Helper_Infinite_Scroll', false) ) {
 				$this->helper_infinite_scroll = new Halftheory_Helper_Infinite_Scroll();
@@ -298,8 +305,8 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			if ( isset($this->helper_minify) ) {
 				return;
 			}
-			if ( ! class_exists('Halftheory_Helper_Minify', false) && is_readable(dirname(__FILE__) . '/helpers/class-halftheory-helper-minify.php') ) {
-				include_once dirname(__FILE__) . '/helpers/class-halftheory-helper-minify.php';
+			if ( ! class_exists('Halftheory_Helper_Minify', false) && is_readable(__DIR__ . '/helpers/class-halftheory-helper-minify.php') ) {
+				include_once __DIR__ . '/helpers/class-halftheory-helper-minify.php';
 			}
 			if ( class_exists('Halftheory_Helper_Minify', false) ) {
 				$this->helper_minify = new Halftheory_Helper_Minify();
@@ -319,8 +326,8 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			if ( isset($this->helper_pages_to_categories) ) {
 				return;
 			}
-			if ( ! class_exists('Halftheory_Helper_Pages_To_Categories', false) && is_readable(dirname(__FILE__) . '/helpers/class-halftheory-helper-pages-to-categories.php') ) {
-				include_once dirname(__FILE__) . '/helpers/class-halftheory-helper-pages-to-categories.php';
+			if ( ! class_exists('Halftheory_Helper_Pages_To_Categories', false) && is_readable(__DIR__ . '/helpers/class-halftheory-helper-pages-to-categories.php') ) {
+				include_once __DIR__ . '/helpers/class-halftheory-helper-pages-to-categories.php';
 			}
 			if ( class_exists('Halftheory_Helper_Pages_To_Categories', false) ) {
 				$this->helper_pages_to_categories = new Halftheory_Helper_Pages_To_Categories();
@@ -340,8 +347,8 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			if ( isset($this->helper_plugin) ) {
 				return;
 			}
-			if ( ! class_exists('Halftheory_Helper_Plugin', false) && is_readable(dirname(__FILE__) . '/helpers/class-halftheory-helper-plugin.php') ) {
-				include_once dirname(__FILE__) . '/helpers/class-halftheory-helper-plugin.php';
+			if ( ! class_exists('Halftheory_Helper_Plugin', false) && is_readable(__DIR__ . '/helpers/class-halftheory-helper-plugin.php') ) {
+				include_once __DIR__ . '/helpers/class-halftheory-helper-plugin.php';
 			}
 			if ( class_exists('Halftheory_Helper_Plugin', false) ) {
 				$this->helper_plugin = new Halftheory_Helper_Plugin(false, basename(__FILE__), static::$prefix);
@@ -361,8 +368,8 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			if ( isset($this->helper_shortcode_code) ) {
 				return;
 			}
-			if ( ! class_exists('Halftheory_Helper_Shortcode_Code', false) && is_readable(dirname(__FILE__) . '/helpers/class-halftheory-helper-shortcode-code.php') ) {
-				include_once dirname(__FILE__) . '/helpers/class-halftheory-helper-shortcode-code.php';
+			if ( ! class_exists('Halftheory_Helper_Shortcode_Code', false) && is_readable(__DIR__ . '/helpers/class-halftheory-helper-shortcode-code.php') ) {
+				include_once __DIR__ . '/helpers/class-halftheory-helper-shortcode-code.php';
 			}
 			if ( class_exists('Halftheory_Helper_Shortcode_Code', false) ) {
 				$this->helper_shortcode_code = new Halftheory_Helper_Shortcode_Code();
@@ -432,7 +439,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 
 		public function after_setup_theme() {
 			// First available action after plugins_loaded.
-			if ( is_front_end() ) {
+			if ( is_public() ) {
 				define('CURRENT_URL', get_current_uri());
 			}
 			add_theme_support('automatic-feed-links');
@@ -453,7 +460,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 		}
 
 		public function rewrite_rules_array( $rules ) {
-			if ( is_front_end() ) {
+			if ( is_public() ) {
 				return $rules;
 			}
 			global $wp_rewrite;
@@ -489,7 +496,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 					continue;
 				}
 			}
-			#print_r($rules);
+			// print_r($rules);
 			return $rules;
 		}
 
@@ -546,7 +553,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 		}
 
 		public function request( $query_vars = array() ) {
-			if ( ! is_front_end() ) {
+			if ( ! is_public() ) {
 				return $query_vars;
 			}
 			// Search.
@@ -590,7 +597,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 		}
 
 		public function template_redirect() {
-			if ( ! is_front_end() ) {
+			if ( ! is_public() ) {
 				return;
 			}
 			// fix search urls.
@@ -638,7 +645,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 		}
 
 		public function wp_default_scripts( &$wp_scripts ) {
-			if ( ! is_front_end() ) {
+			if ( ! is_public() ) {
 				return;
 			}
 			// remove jquery migrate.
@@ -659,10 +666,11 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			if ( has_nav_menu('primary-menu') ) {
 				wp_enqueue_style('dashicons');
 				// header.
-				wp_enqueue_style('slicknav', get_template_directory_uri() . '/assets/js/slicknav/slicknav' . ( ! ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) ? '.min' : '' ) . '.css', array(), '1.0.7', 'screen');
+				$min = ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) ? '' : '.min';
+				wp_enqueue_style('slicknav', get_template_directory_uri() . '/assets/js/slicknav/slicknav' . $min . '.css', array(), '1.0.7', 'screen');
 				wp_enqueue_style('slicknav-init', get_template_directory_uri() . '/assets/js/slicknav/slicknav-init.css', array( 'slicknav' ), $this->get_theme_version(get_template_directory() . '/assets/js/slicknav/slicknav-init.css'), 'screen');
 				// footer.
-				wp_enqueue_script('slicknav', get_template_directory_uri() . '/assets/js/slicknav/jquery.slicknav' . ( ! ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) ? '.min' : '' ) . '.js', array( 'jquery' ), '1.0.7', true);
+				wp_enqueue_script('slicknav', get_template_directory_uri() . '/assets/js/slicknav/jquery.slicknav' . $min . '.js', array( 'jquery' ), '1.0.7', true);
 				wp_enqueue_script('slicknav-init', get_template_directory_uri() . '/assets/js/slicknav/slicknav-init.js', array( 'jquery', 'slicknav' ), $this->get_theme_version(get_template_directory() . '/assets/js/slicknav/slicknav-init.js'), true);
 				$data = array(
 					'brand' => '<a href="' . esc_url(network_home_url('/')) . '">' . get_bloginfo('name') . '</a>',
@@ -670,9 +678,18 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 				wp_localize_script('slicknav-init', 'slicknav', $data);
 			}
 		}
+		public function script_loader_src( $src, $handle ) {
+			if ( ! is_public() ) {
+				return $src;
+			}
+			if ( strpos( $src, '?ver=' ) !== false || strpos( $src, '&ver=' ) !== false ) {
+				$src = remove_query_arg('ver', $src);
+			}
+			return $src;
+		}
 
 		public function wp_head() {
-			if ( ! is_front_end() ) {
+			if ( ! is_public() ) {
 				return;
 			}
 
@@ -714,7 +731,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 					'strip_urls' => true,
 					'add_dots' => false,
 				);
-				$excerpt = get_the_excerpt_filtered($post_id, 500, $args);
+				$excerpt = get_excerpt(get_the_excerpt($post_id), 500, $args);
 			}
 			if ( empty($excerpt) && ( is_tax() || is_tag() || is_category() ) && ! empty_notzero(term_description()) ) {
 				$excerpt = wp_strip_all_tags(term_description(), true);
@@ -735,7 +752,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			if ( $description === $description_trim ) {
 				$description .= '.';
 			} else {
-				$description_trim = preg_replace("/[^\w>;]+(\.\.\.|&#8230;|&hellip;)[\s]*$/i", '$1', $description_trim);
+				$description_trim = preg_replace('/[^\w>;]+(\.\.\.|&#8230;|&hellip;)[\s]*$/i', '$1', $description_trim);
 				$description = $description_trim;
 			}
 			$arr['description'] = $description;
@@ -826,16 +843,10 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			);
 			$search_arr = array_combine($search_files, $search_urls);
 			$favicon_uri = null;
-			foreach ( $search_arr as $file => $url ) {
+			foreach ( $search_files as $file => $url ) {
 				if ( file_exists($file) ) {
 					$favicon_uri = $url;
 					break;
-				}
-			}
-			if ( empty($favicon_uri) && ! is_localhost() ) {
-				if ( url_exists(site_url('/favicon.ico')) ) {
-					// requires htaccess mod_rewrite.
-					$favicon_uri = site_url('/');
 				}
 			}
 			if ( empty($favicon_uri) ) {
@@ -880,7 +891,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 		public function wp_title( $title, $sep = '-', $seplocation = '' ) {
 			// prepend ancestors to $title here.
 			// change $title with other filters - https://developer.wordpress.org/reference/functions/wp_title/
-			if ( ! is_front_end() ) {
+			if ( ! is_public() ) {
 				return $title_old;
 			}
 			$title_old = $title;
@@ -897,12 +908,10 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 					$ancestors = array_reverse($ancestors);
 				}
 				$title = implode(" $sep ", $ancestors);
+			} elseif ( $seplocation === 'right' ) {
+				$title = $title_old . get_bloginfo('name');
 			} else {
-				if ( $seplocation === 'right' ) {
-					$title = $title_old . get_bloginfo('name');
-				} else {
-					$title = get_bloginfo('name') . $title_old;
-				}
+				$title = get_bloginfo('name') . $title_old;
 			}
 			return $title;
 		}
@@ -923,7 +932,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 		}
 
 		public function the_author( $str ) {
-			if ( is_front_end() && is_multisite() ) {
+			if ( is_public() && is_multisite() ) {
 				global $post;
 				if ( is_super_admin($post->post_author) ) {
 					$str = get_bloginfo('name');
@@ -968,6 +977,10 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			// shortcodes.
 			$str = strip_shortcodes_extended($str, array( 'caption', 'gallery', 'playlist', 'audio', 'video', 'embed', 'posts' ));
 			$str = do_shortcode($str);
+			// script/style tags - special case - remove all contents.
+			foreach ( array( 'script', 'style' ) as $tag ) {
+				$str = strip_single_tag($str, $tag);
+			}
 			// replace_tags.
 			$replace_tags_arr = array(
 				'blockquote' => 'em',
@@ -979,47 +992,20 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 				'h6' => 'strong',
 			);
 			$str = replace_tags($str, $replace_tags_arr);
-			$single_line = true;
-			// strip_tags_attr.
 			if ( is_attachment() && ! is_feed() ) {
 				$single_line = false;
-				$strip_tags_arr = array(
-					'a' => array( 'href', 'title' ),
-					'b' => '',
-					'del' => '',
-					'em' => '',
-					'i' => '',
-					'strong' => '',
-					'u' => '',
-					'br' => '',
-				);
+				$allowed_html = get_allowed_html_tags(array( 'br' ), 'wp_kses', 'data');
 			} elseif ( is_feed() ) {
 				$single_line = false;
-				$strip_tags_arr = array(
-					'a' => array( 'href', 'title' ),
-					'b' => '',
-					'del' => '',
-					'em' => '',
-					'i' => '',
-					'strong' => '',
-					'u' => '',
-					'br' => '',
-				);
+				$allowed_html = get_allowed_html_tags(array( 'br' ), 'wp_kses', 'data');
 			} else {
-				$strip_tags_arr = array(
-					'a' => array( 'href', 'title' ),
-					'b' => '',
-					'del' => '',
-					'em' => '',
-					'i' => '',
-					'strong' => '',
-					'u' => '',
-				);
+				$allowed_html = get_allowed_html_tags(array(), 'wp_kses', 'data');
+				$single_line = true;
 			}
-			$str = strip_tags_attr($str, $strip_tags_arr);
+			$str = wp_kses($str, $allowed_html);
 			// get_excerpt.
 			$args = array(
-				'allowable_tags' => array_keys($strip_tags_arr),
+				'allowable_tags' => array_keys($allowed_html),
 				'plaintext' => false,
 				'single_line' => $single_line,
 				'trim_urls' => true,
@@ -1043,6 +1029,61 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 			$str = set_url_scheme_blob($str);
 			$str = make_clickable($str);
 			return $str;
+		}
+
+		public function body_class( $classes = array(), $class = '' ) {
+			// prefixes to remove.
+			$remove = array(
+				'attachment-',
+				'attachmentid-',
+				'author-',
+				'category-',
+				'page-',
+				'paged-',
+				'parent-pageid-',
+				'post-',
+				'postid-',
+				'search-',
+				'single-',
+				'tag-',
+				'tax-',
+				'term-',
+				'theme-',
+				'wp-',
+			);
+			foreach ( $classes as $key => $value ) {
+				foreach ( $remove as $r ) {
+					if ( strpos($value, $r) === 0 ) {
+						unset($classes[ $key ]);
+						break;
+					}
+				}
+			}
+			return $classes;
+		}
+
+		public function post_class( $classes = array(), $class = '', $post_id = 0 ) {
+			// prefixes to remove.
+			$remove = array(
+				'category-',
+				'hentry',
+				'page-',
+				'post-',
+				'status-',
+				'tag-',
+				'tax-',
+				'term-',
+				'type-',
+			);
+			foreach ( $classes as $key => $value ) {
+				foreach ( $remove as $r ) {
+					if ( strpos($value, $r) === 0 ) {
+						unset($classes[ $key ]);
+						break;
+					}
+				}
+			}
+			return $classes;
 		}
 
 		public function embed_oembed_html( $cache = '', $url = '', $attr = array(), $post_ID = 0 ) {
@@ -1091,7 +1132,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 
 			foreach ( $params as $provider => $provider_params ) {
 				if ( strpos($url, $provider) !== false ) {
-					if ( preg_match_all("/ src=\"([^\"]+)\"/is", $cache, $matches) ) {
+					if ( preg_match_all('/ src="([^"]+)"/is', $cache, $matches) ) {
 						if ( ! empty($matches) ) {
 							if ( $matches[1][0] ) {
 								$cache = preg_replace('/' . preg_quote($matches[1][0], '/') . '/', add_query_arg($provider_params, $matches[1][0]), $cache, 1);
@@ -1121,7 +1162,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 
 		public function wp_get_attachment_url( $url, $post_ID ) {
 			// fixes bug in 'wp_get_attachment_url' which skips ssl urls when using ajax.
-			if ( is_ssl() && is_front_end() && 'wp-login.php' !== $pagenow ) {
+			if ( is_ssl() && is_public() && 'wp-login.php' !== $pagenow ) {
 				$url = set_url_scheme($url);
 			}
 			return $url;
@@ -1129,7 +1170,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 
 		public function pre_get_posts( $query ) {
 			// galleries - enable filters so that we can use 'the_posts'.
-			if ( is_front_end() && (int) did_action('get_header') > 0 && (int) did_action('loop_start') > 0 && ! $query->is_main_query() && $query->get('post_type') === 'attachment' ) {
+			if ( is_public() && (int) did_action('get_header') > 0 && (int) did_action('loop_start') > 0 && ! $query->is_main_query() && $query->get('post_type') === 'attachment' ) {
 				global $post;
 				if ( is_object($post) && has_shortcode($post->post_content, 'gallery') ) {
 					if ( $query->get('suppress_filters') ) {
@@ -1141,7 +1182,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 
 		public function the_posts( $posts, $query ) {
 			// galleries - new lines in gallery captions.
-			if ( is_front_end() && (int) did_action('get_header') > 0 && (int) did_action('loop_start') > 0 && ! $query->is_main_query() && $query->get('post_type') === 'attachment' ) {
+			if ( is_public() && (int) did_action('get_header') > 0 && (int) did_action('loop_start') > 0 && ! $query->is_main_query() && $query->get('post_type') === 'attachment' ) {
 				global $post;
 				if ( is_object($post) && has_shortcode($post->post_content, 'gallery') ) {
 					foreach ( $posts as $key => &$value ) {
@@ -1185,6 +1226,13 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 				}
 			}
 			return $sorted_menu_items;
+		}
+
+		public function safe_style_css( $attr = array() ) {
+			if ( ! in_array('display', $attr) ) {
+				$attr[] = 'display';
+			}
+			return $attr;
 		}
 
 		public function big_image_size_threshold( $threshold = 2000, $imagesize = array(), $file = '', $attachment_id = 0 ) {
@@ -1252,8 +1300,8 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 		public function wp_image_editors( $implementations = array() ) {
 			// wp-includes/media.php
 			if ( class_exists('Gmagick', false) ) {
-				if ( ! class_exists('WP_Image_Editor_Gmagick', false) && is_readable(dirname(__FILE__) . '/includes/class-wp-image-editor-gmagick.php') ) {
-					require_once dirname(__FILE__) . '/includes/class-wp-image-editor-gmagick.php';
+				if ( ! class_exists('WP_Image_Editor_Gmagick', false) && is_readable(__DIR__ . '/includes/class-wp-image-editor-gmagick.php') ) {
+					require_once __DIR__ . '/includes/class-wp-image-editor-gmagick.php';
 				}
 				if ( class_exists('WP_Image_Editor_Gmagick', false) ) {
 					$implementations = array_merge(array( 'WP_Image_Editor_Gmagick' ), $implementations);
@@ -1283,7 +1331,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 					}
 				}
 			}
-			$path = preg_replace("/[\/\\\]{2,}/s", DIRECTORY_SEPARATOR, $path);
+			$path = preg_replace('/[\/\\\]{2,}/s', DIRECTORY_SEPARATOR, $path);
 			if ( empty($path) || ! file_exists($path) ) {
 				return false;
 			}
@@ -1373,8 +1421,8 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 							$attr_strings[] = $k . '="' . esc_attr( $v ) . '"';
 						}
 					}
-					$res = sprintf('<video %s>', implode(' ', $attr_strings));
-					$res .= sprintf('<source type="%s" src="%s" />', get_post_mime_type($post_id), esc_url(wp_get_attachment_url($post_id)));
+					$res = wp_sprintf('<video %s>', implode(' ', $attr_strings));
+					$res .= wp_sprintf('<source type="%s" src="%s" />', get_post_mime_type($post_id), esc_url(wp_get_attachment_url($post_id)));
 					$res .= '</video>';
 					break;
 				case 'link':
@@ -2101,13 +2149,12 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 								foreach ( $search_order as $v ) {
 									switch ( $v ) {
 										case 'single':
-											if ( preg_match_all("/<img .*?src=\"([^\"]+)\"/is", $content, $matches) ) {
+											if ( preg_match_all('/<img .*?src="([^"]+)"/is', $content, $matches) ) {
 												if ( ! empty($matches[1]) ) {
 													// remove size suffix.
-													$guid = preg_replace("/\-[0-9]+x[0-9]+(\.[\w]+)$/s", '$1', $matches[1][0]);
+													$guid = preg_replace('/\-[0-9]+x[0-9]+(\.[\w]+)$/s', '$1', $matches[1][0]);
 													global $wpdb;
-													$query = "SELECT ID FROM $wpdb->posts WHERE guid = '" . $guid . "' AND post_type = 'attachment'";
-													$sql = $wpdb->get_col($query);
+													$sql = $wpdb->get_col($wpdb->prepare("SELECT ID FROM $wpdb->posts WHERE guid = %s AND post_type = 'attachment'", $guid));
 													if ( ! empty($sql) ) {
 														$image_id = (int) $sql[0];
 													}

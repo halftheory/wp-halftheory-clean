@@ -5,6 +5,7 @@ defined('ABSPATH') || exit;
 $theme_plugin = 'Halftheory_Clean_Plugin_WP_Cerber';
 
 if ( ! class_exists('Halftheory_Clean_Plugin_WP_Cerber', false) ) :
+	#[AllowDynamicProperties]
 	final class Halftheory_Clean_Plugin_WP_Cerber {
 
 		public function __construct() {

@@ -3,13 +3,14 @@
 defined('ABSPATH') || exit;
 
 if ( ! class_exists('Halftheory_Helper_Shortcode_Code', false) ) :
+	#[AllowDynamicProperties]
 	class Halftheory_Helper_Shortcode_Code {
 
         public $shortcode = 'code';
 
 		public function __construct() {
-			if ( function_exists('is_front_end') ) {
-				if ( ! is_front_end() ) {
+			if ( function_exists('is_public') ) {
+				if ( ! is_public() ) {
 					return;
 				}
 			} elseif ( is_admin() ) {

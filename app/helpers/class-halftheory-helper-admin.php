@@ -3,6 +3,7 @@
 defined('ABSPATH') || exit;
 
 if ( ! class_exists('Halftheory_Helper_Admin', false) ) :
+	#[AllowDynamicProperties]
 	class Halftheory_Helper_Admin {
 
 		public static $current_screen_id;
@@ -134,8 +135,8 @@ if ( ! class_exists('Halftheory_Helper_Admin', false) ) :
 			add_action('wp_before_admin_bar_render', array( $this, 'wp_before_admin_bar_render' ), 20);
 			add_action('admin_bar_menu', array( $this, 'admin_bar_menu' ), 20);
 
-    		if ( function_exists('is_front_end') ) {
-    			if ( is_front_end() ) {
+    		if ( function_exists('is_public') ) {
+    			if ( is_public() ) {
     				return;
     			}
     		} elseif ( ! is_admin() ) {

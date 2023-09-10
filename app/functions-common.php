@@ -70,10 +70,8 @@ if ( ! function_exists('file_get_contents_extended') ) {
 		$str = '';
 		// use user_agent when available.
 		$user_agent = 'PHP' . phpversion() . '/' . __FUNCTION__;
-		if ( isset($_SERVER['HTTP_USER_AGENT']) ) {
-			if ( ! empty($_SERVER['HTTP_USER_AGENT']) ) {
-				$user_agent = $_SERVER['HTTP_USER_AGENT'];
-			}
+		if ( isset($_SERVER['HTTP_USER_AGENT']) && ! empty($_SERVER['HTTP_USER_AGENT']) ) {
+			$user_agent = wp_unslash($_SERVER['HTTP_USER_AGENT']);
 		}
 		// try php.
 		$options = array( 'http' => array( 'user_agent' => $user_agent ) );
@@ -92,7 +90,7 @@ if ( ! function_exists('file_get_contents_extended') ) {
 			}
 		}
 		// try curl.
-		if ( empty($str) && $is_url) {
+		if ( empty($str) && $is_url ) {
 			if ( function_exists('curl_init') ) {
 				$c = @curl_init();
 				// try 'correct' way.
@@ -132,7 +130,7 @@ if ( ! function_exists('fix_potential_html_string') ) {
 			return $str;
 		}
 		if ( strpos($str, '&lt;') !== false ) {
-			if ( substr_count($str, '&lt;') > substr_count($str, '<') || preg_match("/&lt;\/[\w]+&gt;/is", $str) ) {
+			if ( substr_count($str, '&lt;') > substr_count($str, '<') || preg_match('/&lt;\/[\w]+&gt;/is', $str) ) {
 				$str = html_entity_decode($str, ENT_NOQUOTES, 'UTF-8');
 			}
 		} elseif ( strpos($str, '&#039;') !== false ) {
@@ -152,15 +150,104 @@ if ( ! function_exists('get_active_plugins') ) {
 	}
 }
 
+if ( ! function_exists('get_allowed_html_tags') ) {
+	function get_allowed_html_tags( $tags = array(), $format = 'wp_kses', $wp_kses_allowed_html_contexts = null ) {
+		$res = array();
+
+		$all_attributes = array(
+			'action' => true,
+			'alt' => true,
+			'border' => true,
+			'class' => true,
+			'cols' => true,
+			'content' => true,
+			'data-*' => true,
+			'datetime' => true,
+			'height' => true,
+			'href' => true,
+			'id' => true,
+			'lang' => true,
+			'maxlength' => true,
+			'method' => true,
+			'name' => true,
+			'rel' => true,
+			'role' => true,
+			'rows' => true,
+			'src' => true,
+			'style' => true,
+			'target' => true,
+			'title' => true,
+			'type' => true,
+			'value' => true,
+			'width' => true,
+		);
+
+		// format input data.
+		$tags = make_array($tags);
+		if ( count($tags) > 0 ) {
+			if ( is_numeric(key($tags)) ) {
+				$res = array_combine($tags, array_fill(0, count($tags), true));
+			} else {
+				foreach ( $tags as $tag => $attr ) {
+					if ( $attr === '*' ) {
+						$res[ $tag ] = $all_attributes;
+					} elseif ( is_array($attr) ) {
+						if ( is_array(current($attr)) ) {
+							$res[ $tag ] = $attr;
+						} else {
+							$res[ $tag ] = array_combine($attr, array_fill(0, count($attr), true));
+						}
+					} elseif ( ! empty($attr) ) {
+						$attr = make_array($attr);
+						$res[ $tag ] = array_combine($attr, array_fill(0, count($attr), true));
+					} else {
+						$res[ $tag ] = array();
+					}
+				}
+			}
+		}
+
+		// add wp values.
+		// https://developer.wordpress.org/reference/functions/wp_kses_allowed_html/
+		$wp_kses_allowed_html_contexts = make_array($wp_kses_allowed_html_contexts);
+		foreach ( $wp_kses_allowed_html_contexts as $value ) {
+			if ( ! in_array($value, array( 'post', 'user_description', 'pre_user_description', 'strip', 'data' )) ) {
+				continue;
+			}
+			$res = array_merge(wp_kses_allowed_html($value), $res);
+		}
+
+		switch ( $format ) {
+			case 'array':
+				$res = array_keys($res);
+				sort($res);
+				break;
+
+			case 'strip_tags':
+				$res = array_keys($res);
+				sort($res);
+				$res = ! empty($res) ? '<' . implode('><', $res) . '>' : null;
+				break;
+
+			default:
+				ksort($res);
+				break;
+		}
+		return apply_filters('get_allowed_html_tags', $res, $format);
+	}
+}
+
 if ( ! function_exists('get_current_uri') ) {
 	function get_current_uri( $keep_query = false ) {
 		$res  = is_ssl() ? 'https://' : 'http://';
-		$res .= isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '';
-		$res .= isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : $_SERVER['PHP_SELF'];
-		if ( wp_doing_ajax() && isset($_SERVER['HTTP_REFERER']) ) {
-			if ( ! empty($_SERVER['HTTP_REFERER']) ) {
-				$res = $_SERVER['HTTP_REFERER'];
-			}
+		$res .= isset($_SERVER['HTTP_HOST']) ? wp_unslash($_SERVER['HTTP_HOST']) : '';
+		if ( isset($_SERVER['REQUEST_URI']) ) {
+			$res .= wp_unslash($_SERVER['REQUEST_URI']);
+		} elseif ( isset($_SERVER['PHP_SELF']) ) {
+			$res .= wp_unslash($_SERVER['PHP_SELF']);
+		}
+		if ( wp_doing_ajax() && isset($_SERVER['HTTP_REFERER']) && ! empty($_SERVER['HTTP_REFERER']) ) {
+			$res = wp_unslash($_SERVER['HTTP_REFERER']);
 		}
 		if ( ! $keep_query ) {
 			$remove = array();
@@ -241,8 +328,7 @@ if ( ! function_exists('get_excerpt') ) {
 		}
 		if ( ! empty($args['allowable_tags']) && $args['plaintext'] === false ) {
 			// script/style tags - special case - remove all contents.
-			$strip_all = array( 'script', 'style' );
-			foreach ( $strip_all as $tag ) {
+			foreach ( array( 'script', 'style' ) as $tag ) {
 				if ( array_key_exists($tag, $args['allowable_tags']) ) {
 					continue;
 				}
@@ -263,7 +349,7 @@ if ( ! function_exists('get_excerpt') ) {
 		}
 		if ( $args['strip_emails'] ) {
 			$regex = '([.0-9a-z_+-]+)@(([0-9a-z-]+\.)+[0-9a-z]{2,})';
-			$text = preg_replace("#" . $regex . "[\s]*#is", '', $text);
+			$text = preg_replace('#' . $regex . '[\s]*#is', '', $text);
 		}
 		if ( $args['strip_urls'] ) {
 			$urls = wp_extract_urls(wp_specialchars_decode($text));
@@ -284,7 +370,7 @@ if ( ! function_exists('get_excerpt') ) {
 			$text = unwptexturize($text);
 		}
 		// remove repeating symbols, emojis.
-		$no_repeat = array( '&lt;', '&gt;', '&amp;', '&ndash;', '&bull;', '&sect;', '&hearts;', '&hellip;', '...', '++', '--', '~~', '##', '**', '==', '__', '_ ', "//" );
+		$no_repeat = array( '&lt;', '&gt;', '&amp;', '&ndash;', '&bull;', '&sect;', '&hearts;', '&hellip;', '...', '++', '--', '~~', '##', '**', '==', '__', '_ ', '//' );
 		foreach ( $no_repeat as $value ) {
 			if ( strpos($text, $value) !== false ) {
 				$text = preg_replace('/(' . preg_quote($value, '/') . '[\s]*){2,}/s', '$1', $text);
@@ -302,7 +388,7 @@ if ( ! function_exists('get_excerpt') ) {
 			$text = trim_excess_space($text);
 		}
 		// trim the top.
-		$regex_arr = array( "(<br[\/ ]*>)" );
+		$regex_arr = array( '(<br[\/ ]*>)' );
 		if ( function_exists('make_array') ) {
 			$args['trim_title'] = make_array($args['trim_title']);
 		} elseif ( ! is_array($args['trim_title']) ) {
@@ -347,7 +433,8 @@ if ( ! function_exists('get_excerpt') ) {
 			$regex_arr[] = $regex;
 		}
 		$i = 0;
-		while ( $i < count($regex_arr) ) {
+		$j = count($regex_arr);
+		while ( $i < $j ) {
 			$i = 0;
 			foreach ( $regex_arr as $value ) {
 				$replaced = false;
@@ -374,10 +461,10 @@ if ( ! function_exists('get_excerpt') ) {
 			}
 		}
 		// correct length.
-		$last_char = '\w' . preg_quote(":;@&%=+$?_.-#/>)»",'/');
+		$last_char = '\w' . preg_quote(':;@&%=+$?_.-#/>)»', '/');
 		// TODO: find a fast way of checking multibyte strings here.
-		if ( strlen(strip_tags($text)) <= $length ) {
-			if ( $args['add_stop'] && ! empty(strip_tags($text)) ) {
+		if ( strlen(wp_strip_all_tags($text)) <= $length ) {
+			if ( $args['add_stop'] && ! empty(wp_strip_all_tags($text)) ) {
 				$text = preg_replace("/[^$last_char]+[\s]*$/is", '', $text);
 				$text = rtrim($text, '. ') . '.';
 			}
@@ -401,10 +488,10 @@ if ( ! function_exists('get_excerpt') ) {
 					$text = force_balance_tags($text);
 				}
 			}
-			if ( $args['add_dots'] && ! empty(strip_tags($text)) ) {
+			if ( $args['add_dots'] && ! empty(wp_strip_all_tags($text)) ) {
 				$text = preg_replace("/[^$last_char]+[\s]*$/is", '', $text);
 				// add a space if the last word is a url - avoids conflicts with make_clickable.
-				if ( $arr = preg_split("/[\s,;]+/s", $text) ) {
+				if ( $arr = preg_split('/[\s,;]+/s', $text) ) {
 					if ( strpos(end($arr), 'http') === 0 ) {
 						$text .= ' ';
 					} elseif ( function_exists('make_clickable') ) {
@@ -418,7 +505,7 @@ if ( ! function_exists('get_excerpt') ) {
 				} else {
 					$text .= __('&hellip;');
 				}
-			} elseif ( $args['add_stop'] && ! empty(strip_tags($text)) ) {
+			} elseif ( $args['add_stop'] && ! empty(wp_strip_all_tags($text)) ) {
 				$text = preg_replace("/[^$last_char]+[\s]*$/is", '', $text);
 				$text = rtrim($text, '. ') . '.';
 			}
@@ -436,7 +523,8 @@ if ( ! function_exists('get_excerpt') ) {
 				$text = force_balance_tags($text);
 			} else {
 				// puts plaintext in a <p>.
-				$dom = @DOMDocument::loadHTML( mb_convert_encoding($text, 'HTML-ENTITIES', 'UTF-8') );
+				$dom = new DOMDocument();
+				$dom->loadHTML( htmlentities($str, ENT_COMPAT, 'UTF-8') );
 				$text = trim( strip_tags( html_entity_decode( $dom->saveHTML() ), $args['allowable_tags'] ) );
 			}
 		}
@@ -524,13 +612,11 @@ if ( ! function_exists('get_fresh_file_or_transient_contents') ) {
 			// callback function.
 			if ( is_callable($remotefile_or_callback) ) {
 				$str_new = $remotefile_or_callback();
-			} else {
+			} elseif ( function_exists('file_get_contents_extended') ) {
 				// file, url.
-				if ( function_exists('file_get_contents_extended') ) {
-					$str_new = file_get_contents_extended($remotefile_or_callback);
-				} else {
-					$str_new = @file_get_contents($remotefile_or_callback);
-				}
+				$str_new = file_get_contents_extended($remotefile_or_callback);
+			} else {
+				$str_new = @file_get_contents($remotefile_or_callback);
 			}
 			// success - save.
 			if ( $str_new !== false ) {
@@ -706,22 +792,6 @@ if ( ! function_exists('get_site_logo_url_from_site_icon') ) {
 	}
 }
 
-if ( ! function_exists('get_the_content_filtered') ) {
-	function get_the_content_filtered( $str = '' ) {
-		if ( empty($str) ) {
-			return $str;
-		}
-		$func = function ( $res = true ) {
-			return true;
-		};
-		add_filter('the_content_conditions', $func);
-		$str = apply_filters('the_content', $str);
-		$str = str_replace(']]>', ']]&gt;', $str);
-		remove_filter('the_content_conditions', $func);
-		return $str;
-	}
-}
-
 if ( ! function_exists('get_the_excerpt_fallback') ) {
 	function get_the_excerpt_fallback( $str = '', $post = null ) {
 		if ( ! empty_notzero($str) ) {
@@ -746,8 +816,7 @@ if ( ! function_exists('get_the_excerpt_fallback') ) {
 			}
 			// children.
 			$post_types = array_values(get_post_types(array( 'public' => true ), 'names' ));
-			$remove = array( 'attachment', 'revision', 'rl_gallery' );
-			$post_types = array_values(array_diff($post_types, $remove));
+			$post_types = array_values(array_diff($post_types, array( 'attachment', 'revision', 'rl_gallery' )));
 			$args = array(
 				'post_parent' => $post_id,
 				'orderby' => 'menu_order',
@@ -785,62 +854,6 @@ if ( ! function_exists('get_the_excerpt_fallback') ) {
 		};
 		$res = $func($post_id);
 		return apply_filters('get_the_excerpt_fallback', $res, $post_id);
-	}
-}
-
-if ( ! function_exists('get_the_excerpt_filtered') ) {
-	function get_the_excerpt_filtered( $str_or_post, $length = null, $args = null ) {
-		$str = '';
-		if ( empty($str_or_post) ) {
-			return $str;
-		}
-		// add filters.
-		$func = function ( $res = true ) {
-			return true;
-		};
-		add_filter('the_excerpt_conditions', $func);
-		if ( ! is_null($length) ) {
-			$func_length = function ( $value ) use ( $length ) {
-				return $length;
-			};
-			add_filter('get_excerpt_length', $func_length);
-		}
-		if ( ! is_null($args) ) {
-			$func_args = function ( $value ) use ( $args ) {
-				return $args;
-			};
-			add_filter('get_excerpt_args', $func_args);
-		}
-		if ( is_numeric($str_or_post) || is_object($str_or_post) ) {
-			// post.
-			if ( ! in_the_loop() ) {
-				setup_postdata($str_or_post);
-			}
-			$str = get_the_excerpt($str_or_post);
-			// fallback to content.
-			if ( empty_notzero($str) ) {
-				if ( function_exists('get_the_excerpt_fallback') ) {
-					$str = get_the_excerpt_fallback($str, $str_or_post);
-				} else {
-					$str = get_the_content('', false, $str_or_post);
-				}
-				$str = apply_filters('get_the_excerpt', $str);
-			}
-		} else {
-			// string.
-			$str = apply_filters('get_the_excerpt', $str_or_post);
-		}
-		// don't need this for now.
-		// $str = apply_filters('the_excerpt', $str);
-		// remove filters.
-		remove_filter('the_excerpt_conditions', $func);
-		if ( ! is_null($length) ) {
-			remove_filter('get_excerpt_length', $func_length);
-		}
-		if ( ! is_null($args) ) {
-			remove_filter('get_excerpt_args', $func_args);
-		}
-		return $str;
 	}
 }
 
@@ -894,8 +907,8 @@ if ( ! function_exists('get_visitor_ip') ) {
 		} elseif ( getenv('REMOTE_ADDR') && stripos(getenv('REMOTE_ADDR'), 'unknown') === false ) {
 			$ip = getenv('REMOTE_ADDR');
 		} elseif ( isset($_SERVER['REMOTE_ADDR']) ) {
-			if ( $_SERVER['REMOTE_ADDR'] && stripos($_SERVER['REMOTE_ADDR'], 'unknown') === false ) {
-				$ip = $_SERVER['REMOTE_ADDR'];
+			if ( stripos(wp_unslash($_SERVER['REMOTE_ADDR'], 'unknown')) === false ) {
+				$ip = wp_unslash($_SERVER['REMOTE_ADDR']);
 			}
 		}
 		return $ip;
@@ -1006,6 +1019,12 @@ if ( ! function_exists('in_array_int') ) {
 
 if ( ! function_exists('is_front_end') ) {
 	function is_front_end() {
+		return is_public();
+	}
+}
+
+if ( ! function_exists('is_public') ) {
+	function is_public() {
 		if ( is_admin() && ! wp_doing_ajax() ) {
 			return false;
 		}
@@ -1035,7 +1054,8 @@ if ( ! function_exists('is_home_page') ) {
 if ( ! function_exists('is_localhost') ) {
 	function is_localhost() {
 		if ( isset($_SERVER['HTTP_HOST']) ) {
-			if ( strpos($_SERVER['HTTP_HOST'], 'localhost') === 0 || strpos($_SERVER['HTTP_HOST'], '.local') !== false ) {
+			$http_host = sanitize_text_field(wp_unslash($_SERVER['HTTP_HOST']));
+			if ( strpos($http_host, 'localhost') === 0 || strpos($http_host, '.local') !== false ) {
 				return true;
 			}
 		}
@@ -1052,7 +1072,7 @@ if ( ! function_exists('is_login_page') ) {
 		}
 		if ( $GLOBALS['pagenow'] === $wp_login ) {
 			$res = true;
-		} elseif ( isset($_SERVER['PHP_SELF']) && strpos($_SERVER['PHP_SELF'], $wp_login) !== false ) {
+		} elseif ( isset($_SERVER['PHP_SELF']) && strpos(wp_unslash($_SERVER['PHP_SELF']), $wp_login) !== false ) {
 			$res = true;
 		} elseif ( in_array(ABSPATH . $wp_login, get_included_files(), true) ) {
 			$res = true;
@@ -1095,9 +1115,9 @@ if ( ! function_exists('is_signup_page') ) {
 			$res = true;
 		} elseif ( $GLOBALS['pagenow'] === 'wp-register.php' ) {
 			$res = true;
-		} elseif ( isset($_SERVER['PHP_SELF']) && strpos($_SERVER['PHP_SELF'], 'wp-signup.php') !== false ) {
+		} elseif ( isset($_SERVER['PHP_SELF']) && strpos(wp_unslash($_SERVER['PHP_SELF']), 'wp-signup.php') !== false ) {
 			$res = true;
-		} elseif ( isset($_SERVER['PHP_SELF']) && strpos($_SERVER['PHP_SELF'], 'wp-register.php') !== false ) {
+		} elseif ( isset($_SERVER['PHP_SELF']) && strpos(wp_unslash($_SERVER['PHP_SELF']), 'wp-register.php') !== false ) {
 			$res = true;
 		} elseif ( in_array(ABSPATH . 'wp-signup.php', get_included_files(), true) ) {
 			$res = true;
@@ -1124,7 +1144,7 @@ if ( ! function_exists('is_slug_current') ) {
 		$slugs = make_array($slugs, '/');
 		$slugs = array_filter($slugs);
 		foreach ( $slugs as $value ) {
-			if ( ! preg_match("/[\w]+/i", $value) ) {
+			if ( ! preg_match('/[\w]+/i', $value) ) {
 				continue;
 			}
 			if ( $value === $url ) {
@@ -1252,6 +1272,8 @@ if ( ! function_exists('link_terms') ) {
 			'strong',
 			'u',
 		);
+		$text_tags = get_allowed_html_tags($text_tags, 'array', 'data');
+
 		$defaults = array(
 			'limit' => 1,
 			'count_existing_links' => true,
@@ -1309,7 +1331,7 @@ if ( ! function_exists('link_terms') ) {
 				uasort($links[ $k ], $sort_longest_first);
 				// existing links.
 				if ( ! empty($args['count_existing_links']) && strpos($str, esc_url($v)) !== false ) {
-					if ( preg_match_all("/<a [^>]*?href=\"" . preg_quote(esc_url($v), '/') . "\"/is", $str, $matches) ) {
+					if ( preg_match_all('/<a [^>]*?href="' . preg_quote(esc_url($v), '/') . '"/is', $str, $matches) ) {
 						$links[ $k ][ $count_key ] = count($matches);
 					}
 				}
@@ -1348,7 +1370,7 @@ if ( ! function_exists('link_terms') ) {
 					// after a link is fine.
 					$link_open = false;
 				} elseif ( ! empty($args['in_html_tags']) ) {
-					if ( ! preg_match("/^<(" . implode('|', $args['in_html_tags']) . ")( |\/|>)/is", $textarr[ $i - 1 ]) ) {
+					if ( ! preg_match('/^<(' . implode('|', $args['in_html_tags']) . ')( |\/|>)/is', $textarr[ $i - 1 ]) ) {
 						continue;
 					}
 				}
@@ -1534,12 +1556,12 @@ if ( ! function_exists('strip_all_shortcodes') ) {
 			$go = false;
 		}
 		// [] inside html tag.
-		if ( $go && preg_match("/<[a-z]+ [^>\[\]]+\[[^>]+>/is", $str) ) {
+		if ( $go && preg_match('/<[a-z]+ [^>\[\]]+\[[^>]+>/is', $str) ) {
 			$go = false;
 		}
 		if ( $go ) {
 			// more than 4 letters.
-			$str = preg_replace("/\[[^\]]{5,}\]/is", '', $str);
+			$str = preg_replace('/\[[^\]]{5,}\]/is', '', $str);
 		}
 		return $str;
 	}
@@ -1588,7 +1610,7 @@ if ( ! function_exists('strip_single_tag') ) {
 }
 
 if ( ! function_exists('strip_tags_attr') ) {
-	function strip_tags_attr( $str = '', $allowable_tags_attr = array() ) {
+	function strip_tags_attr( $str = '', $attr = array() ) {
 		if ( empty($str) ) {
 			return $str;
 		}
@@ -1598,140 +1620,16 @@ if ( ! function_exists('strip_tags_attr') ) {
 		if ( strpos($str, '<') === false ) {
 			return $str;
 		}
-		// script/style tags - special case - remove all contents.
-		$strip_all = array( 'script', 'style' );
-		foreach ( $strip_all as $tag ) {
-			if ( array_key_exists($tag, $allowable_tags_attr) ) {
-				continue;
-			}
-			if ( function_exists('strip_single_tag') ) {
-				$str = strip_single_tag($str, $tag);
-			}
+		if ( empty($attr) ) {
+			return wp_strip_all_tags($str);
 		}
-		if ( empty($allowable_tags_attr) ) {
-			return strip_tags($str);
+		// check the attr.
+		if ( ! is_array($attr) ) {
+			$attr = get_allowed_html_tags($attr);
+		} elseif ( is_array($attr) && is_numeric(key($attr)) ) {
+			$attr = get_allowed_html_tags($attr);
 		}
-		$allowable_tags = '<' . implode('><', array_keys($allowable_tags_attr)) . '>';
-		$str = strip_tags($str, $allowable_tags);
-		$has_tags = false;
-		foreach ( $allowable_tags_attr as $tag => $attr ) {
-			if ( strpos($str, '<' . $tag . '>') !== false || strpos($str, '<' . $tag . ' ') !== false ) {
-				$has_tags = true;
-				break;
-			}
-		}
-		if ( $has_tags === false ) {
-			return $str;
-		}
-		if ( function_exists('trim_excess_space') ) {
-			$str = trim_excess_space($str);
-		}
-		$text_tags = array(
-			'b',
-			'blockquote',
-			'del',
-			'div',
-			'em',
-			'h1',
-			'h2',
-			'h3',
-			'h4',
-			'h5',
-			'h6',
-			'i',
-			'p',
-			'span',
-			'strong',
-			'u',
-		);
-		$void_tags = array(
-			'area',
-			'base',
-			'basefont',
-			'br',
-			'col',
-			'command',
-			'embed',
-			'frame',
-			'hr',
-			'img',
-			'input',
-			'keygen',
-			'link',
-			'menuitem',
-			'meta',
-			'param',
-			'source',
-			'track',
-			'wbr',
-		);
-		$wrapper = 'domwrapper';
-		$dom = @DOMDocument::loadHTML('<' . $wrapper . '>' . mb_convert_encoding($str, 'HTML-ENTITIES', 'UTF-8') . '</' . $wrapper . '>', LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
-		$dom->formatOutput = true;
-		$dom->preserveWhiteSpace = false;
-		$xpath = new DOMXPath($dom);
-		#$tags = $xpath->query('//*');
-		$tags = $xpath->query('//*[not(self::br)][not(descendant-or-self::pre)][not(descendant-or-self::script)][not(descendant-or-self::style)]');
-		$domElemsToRemove = array();
-		foreach ( $tags as $tag ) {
-			$my_tag = $tag->tagName;
-			if ( $my_tag === $wrapper ) {
-				continue;
-			}
-			if ( ! array_key_exists($my_tag, $allowable_tags_attr) ) {
-				continue;
-			}
-			if ( $allowable_tags_attr[ $my_tag ] === '*' ) {
-				continue;
-			}
-			// remove empty, only for text-tags (probably).
-			if ( in_array($my_tag, $text_tags, true) && ! in_array($my_tag, $void_tags, true) ) {
-				if ( trim($tag->nodeValue) === '' && (int) $tag->childNodes->length === 0 && ( empty($allowable_tags_attr[ $my_tag ]) || (int) $tag->attributes->length === 0 ) ) {
-					$domElemsToRemove[] = $tag;
-					continue;
-				}
-			}
-			if ( (int) $tag->attributes->length === 0 ) {
-				continue;
-			}
-			// remove attr.
-			if ( function_exists('make_array') ) {
-				$allowable_tags_attr[ $my_tag ] = make_array($allowable_tags_attr[ $my_tag ]);
-			} elseif ( ! is_array($allowable_tags_attr[ $my_tag ]) ) {
-				$allowable_tags_attr[ $my_tag ] = explode(',', $allowable_tags_attr[ $my_tag ]);
-				$allowable_tags_attr[ $my_tag ] = array_map('trim', $allowable_tags_attr[ $my_tag ]);
-				$allowable_tags_attr[ $my_tag ] = array_filter($allowable_tags_attr[ $my_tag ]);
-			}
-			$remove = array();
-			for ( $i = 0; $i < $tag->attributes->length; $i++ ) {
-				$my_attr = $tag->attributes->item($i)->name;
-				if ( ! in_array($my_attr, $allowable_tags_attr[ $my_tag ], true) ) {
-					$remove[] = $my_attr;
-				}
-			}
-			if ( ! empty($remove) ) {
-				foreach ( $remove as $value ) {
-					$tag->removeAttribute($value);
-				}
-			}
-		}
-		foreach ( $domElemsToRemove as $domElement ) {
-			$domElement->parentNode->removeChild($domElement);
-		}
-		#$str = trim( strip_tags( html_entity_decode( $dom->saveHTML() ), $allowable_tags ) ); // conflicts with <3
-		$str = trim( strip_tags( $dom->saveHTML(), $allowable_tags ) );
-		if ( ! empty($domElemsToRemove) && function_exists('trim_excess_space') ) {
-			$str = trim_excess_space($str);
-		}
-		// wp adds single space before closer, so we should match it.
-		if ( preg_match_all("/(<(" . implode('|', $void_tags) . ") [^>]+)>/is", $str, $matches) ) {
-			if ( ! empty($matches[0]) ) {
-				foreach ( $matches[0] as $key => $value ) {
-					$str = str_replace($value, rtrim($matches[1][ $key ], '/ ') . ' />', $str);
-				}
-			}
-		}
-		return $str;
+		return wp_kses($str, $attr);
 	}
 }
 
@@ -1785,6 +1683,9 @@ if ( ! function_exists('the_content_conditions') ) {
 		if ( empty($str) ) {
 			$res = false;
 		}
+		if ( ! headers_sent() && ! wp_doing_ajax() && ! in_the_loop() ) {
+			$res = false;
+		}
 		if ( did_action('get_header') === 0 && ! wp_doing_ajax() && ! is_feed() ) {
 			$res = false;
 		}
@@ -1825,6 +1726,9 @@ if ( ! function_exists('the_excerpt_conditions') ) {
 		if ( empty($str) ) {
 			$res = false;
 		}
+		if ( ! headers_sent() && ! wp_doing_ajax() && ! in_the_loop() ) {
+			$res = false;
+		}
 		if ( did_action('get_header') === 0 && ! wp_doing_ajax() && ! is_feed() ) {
 			$res = false;
 		}
@@ -1838,12 +1742,6 @@ if ( ! function_exists('the_excerpt_conditions') ) {
 		}
 		if ( function_exists('is_signup_page') ) {
 			if ( is_login_page() ) {
-				$res = false;
-			}
-		}
-		if ( ! in_the_loop() ) {
-			// allow term_description().
-			if ( ! is_tax() && ! is_tag() && ! is_category() ) {
 				$res = false;
 			}
 		}

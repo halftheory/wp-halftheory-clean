@@ -17,7 +17,7 @@ defined('ABSPATH') || exit;
 	}
 	// Description.
 	if ( ( is_tax() || is_tag() || is_category() ) && ! empty_notzero(term_description()) ) {
-		echo get_the_content_filtered(term_description());
+		apply_filters('the_content', term_description());
 	}
 	// Posts.
 	if ( have_posts() ) {

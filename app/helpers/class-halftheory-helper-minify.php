@@ -8,6 +8,7 @@ halftheory_helper_minify_header
 defined('ABSPATH') || exit;
 
 if ( ! class_exists('Halftheory_Helper_Minify', false) ) :
+	#[AllowDynamicProperties]
 	class Halftheory_Helper_Minify {
 
 		public static $minify_path = null;
@@ -17,8 +18,8 @@ if ( ! class_exists('Halftheory_Helper_Minify', false) ) :
 		);
 
 		public function __construct() {
-			if ( function_exists('is_front_end') ) {
-				if ( ! is_front_end() ) {
+			if ( function_exists('is_public') ) {
+				if ( ! is_public() ) {
 					return;
 				}
 			} elseif ( is_admin() ) {
