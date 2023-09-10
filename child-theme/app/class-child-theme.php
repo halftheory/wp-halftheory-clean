@@ -7,6 +7,7 @@ if ( ! class_exists('Halftheory_Clean', false) && is_readable(get_template_direc
 }
 
 if ( ! class_exists('Halftheory_Clean_Child_Theme', false) && class_exists('Halftheory_Clean', false) ) :
+	#[AllowDynamicProperties]
 	final class Halftheory_Clean_Child_Theme extends Halftheory_Clean {
 
 		protected function __construct( $load_actions = false ) {

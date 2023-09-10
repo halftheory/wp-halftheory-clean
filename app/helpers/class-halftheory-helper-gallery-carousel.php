@@ -10,6 +10,7 @@ halftheory_helper_gallery_carousel_slick_settings
 defined('ABSPATH') || exit;
 
 if ( ! class_exists('Halftheory_Helper_Gallery_Carousel', false) ) :
+	#[AllowDynamicProperties]
 	class Halftheory_Helper_Gallery_Carousel {
 
 		public $prefix = 'gallery-carousel';
@@ -19,8 +20,8 @@ if ( ! class_exists('Halftheory_Helper_Gallery_Carousel', false) ) :
 			'arrows' => false,
 			'autoplay' => true,
 			'autoplaySpeed' => 3000,
-            'centerMode' => false,
-            'dots' => false,
+			'centerMode' => false,
+			'dots' => false,
 			'fade' => true,
 			'infinite' => true,
 			'slidesToShow' => 3,
@@ -28,27 +29,27 @@ if ( ! class_exists('Halftheory_Helper_Gallery_Carousel', false) ) :
 		);
 		public $aspectratio_options = array(
 			'1-1' => '1:1',
-            '4-3' => '4:3',
-            '16-9' => '16:9',
-            '21-9' => '21:9',
-            '3-4' => '3:4',
-            '9-16' => '9:16',
-            '9-21' => '9:21',
+			'4-3' => '4:3',
+			'16-9' => '16:9',
+			'21-9' => '21:9',
+			'3-4' => '3:4',
+			'9-16' => '9:16',
+			'9-21' => '9:21',
 		);
 
 		public function __construct() {
 			add_filter('post_gallery', array( $this, 'post_gallery' ), 20, 2);
-    		add_action('get_footer', array( $this, 'get_footer' ), 20, 2);
+			add_action('get_footer', array( $this, 'get_footer' ), 20, 2);
 			if ( is_admin() ) {
-            	add_action('print_media_templates', array( $this, 'print_media_templates' ), 20);
+				add_action('print_media_templates', array( $this, 'print_media_templates' ), 20);
 			}
 		}
 
 		/* actions */
 
 		public function post_gallery( $output = '', $attr = array(), $instance = 1 ) {
-			if ( function_exists('is_front_end') ) {
-				if ( ! is_front_end() ) {
+			if ( function_exists('is_public') ) {
+				if ( ! is_public() ) {
 					return $output;
 				}
 			}
@@ -81,73 +82,74 @@ if ( ! class_exists('Halftheory_Helper_Gallery_Carousel', false) ) :
 				return $output;
 			}
 
-            // remove this filter to prevent infinite looping.
-            remove_action(current_action(), array( $this, __FUNCTION__ ), 20);
-            // get the html.
-            $output = gallery_shortcode($attr);
-            // add the filter again.
+			// remove this filter to prevent infinite looping.
+			remove_action(current_action(), array( $this, __FUNCTION__ ), 20);
+			// get the html.
+			$output = gallery_shortcode($attr);
+			// add the filter again.
 			add_filter(current_action(), array( $this, __FUNCTION__ ), 20, 2);
 
-            if ( strpos($output, '<div id=') === false ) {
-            	return $output;
-            }
+			if ( strpos($output, '<div id=') === false ) {
+				return $output;
+			}
 
-            // get selector and add classes.
-            $selector = false;
-            if ( preg_match_all("/<div id=['\"]([^'\"]+)['\"] class=['\"]([^'\"]+)['\"]>/is", $output, $matches, PREG_SET_ORDER) ) {
-            	foreach ( $matches as $key => $value ) {
-            		if ( ! isset($value[1]) ) {
-            			continue;
-            		}
-            		if ( strpos($value[1], 'gallery-') === 0 ) {
-            			$selector = trim($value[1]);
-            			$classes = $value[2];
-            			if ( $carousel ) {
-            				$classes .= ' ' . $this->prefix;
-            			}
-            			if ( $aspectratio ) {
-            				$classes .= ' gallery-aspectratio-' . $aspectratio;
-            			}
-            			$output = str_replace($value[0], '<div id="' . $selector . '" class="' . trim($classes) . '">', $output);
-            			break;
-            		}
-            	}
-            }
-            if ( ! $selector ) {
-            	return $output;
-            }
+			// get selector and add classes.
+			$selector = false;
+			if ( preg_match_all("/<div id=['\"]([^'\"]+)['\"] class=['\"]([^'\"]+)['\"]>/is", $output, $matches, PREG_SET_ORDER) ) {
+				foreach ( $matches as $key => $value ) {
+					if ( ! isset($value[1]) ) {
+						continue;
+					}
+					if ( strpos($value[1], 'gallery-') === 0 ) {
+						$selector = trim($value[1]);
+						$classes = $value[2];
+						if ( $carousel ) {
+							$classes .= ' ' . $this->prefix;
+						}
+						if ( $aspectratio ) {
+							$classes .= ' gallery-aspectratio-' . $aspectratio;
+						}
+						$output = str_replace($value[0], '<div id="' . $selector . '" class="' . trim($classes) . '">', $output);
+						break;
+					}
+				}
+			}
+			if ( ! $selector ) {
+				return $output;
+			}
 
-            // save the item for css + js loading.
-            if ( $carousel && ! isset(static::$items_carousel[ $selector ]) ) {
+			// save the item for css + js loading.
+			if ( $carousel && ! isset(static::$items_carousel[ $selector ]) ) {
 				$gallery_settings = $this->shortcode_attr_to_slick_settings($attr);
-            	static::$items_carousel[ $selector ] = $this->get_slick_settings($gallery_settings, null, true);
-            }
-            if ( $aspectratio && ! isset(static::$items_aspectratio[ $selector ]) ) {
-            	static::$items_aspectratio[ $selector ] = $aspectratio;
-            }
+				static::$items_carousel[ $selector ] = $this->get_slick_settings($gallery_settings, null, true);
+			}
+			if ( $aspectratio && ! isset(static::$items_aspectratio[ $selector ]) ) {
+				static::$items_aspectratio[ $selector ] = $aspectratio;
+			}
 
 			return $output;
 		}
 
 		public function get_footer( $name, $args ) {
-			if ( function_exists('is_front_end') ) {
-				if ( ! is_front_end() ) {
+			if ( function_exists('is_public') ) {
+				if ( ! is_public() ) {
 					return;
 				}
 			}
 			if ( ! empty(static::$items_carousel) ) {
 				$handle = $this->prefix;
+            	$min = ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) ? '' : '.min';
 				// slick.
 				wp_enqueue_style($handle . '-slick', get_template_directory_uri() . '/app/helpers/gallery-carousel/slick/slick.css', array(), '1.8.1', 'screen');
 				wp_enqueue_style($handle . '-slick-theme', get_template_directory_uri() . '/app/helpers/gallery-carousel/slick/slick-theme.css', array( $handle . '-slick' ), '1.8.1', 'screen');
-				wp_enqueue_script($handle . '-slick', get_template_directory_uri() . '/app/helpers/gallery-carousel/slick/slick' . ( ! ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) ? '.min' : '' ) . '.js', array( 'jquery' ), '1.8.1', true);
+				wp_enqueue_script($handle . '-slick', get_template_directory_uri() . '/app/helpers/gallery-carousel/slick/slick' . $min . '.js', array( 'jquery' ), '1.8.1', true);
 				// helper.
 				if ( method_exists('Halftheory_Clean', 'get_theme_version') ) {
 					wp_enqueue_style($handle, get_template_directory_uri() . '/app/helpers/gallery-carousel/gallery-carousel.css', array( $handle . '-slick-theme' ), Halftheory_Clean::get_instance()->get_theme_version(get_template_directory() . '/app/helpers/gallery-carousel/gallery-carousel.css'), 'screen');
-					wp_enqueue_script($handle, get_template_directory_uri() . '/app/helpers/gallery-carousel/gallery-carousel' . ( ! ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) ? '.min' : '' ) . '.js', array( 'jquery', $handle . '-slick' ), Halftheory_Clean::get_instance()->get_theme_version(get_template_directory() . '/app/helpers/gallery-carousel/gallery-carousel' . ( ! ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) ? '.min' : '' ) . '.js'), true);
+					wp_enqueue_script($handle, get_template_directory_uri() . '/app/helpers/gallery-carousel/gallery-carousel' . $min . '.js', array( 'jquery', $handle . '-slick' ), Halftheory_Clean::get_instance()->get_theme_version(get_template_directory() . '/app/helpers/gallery-carousel/gallery-carousel' . $min . '.js'), true);
 				} else {
 					wp_enqueue_style($handle, get_template_directory_uri() . '/app/helpers/gallery-carousel/gallery-carousel.css', array( $handle . '-slick-theme' ), '', 'screen');
-					wp_enqueue_script($handle, get_template_directory_uri() . '/app/helpers/gallery-carousel/gallery-carousel' . ( ! ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) ? '.min' : '' ) . '.js', array( 'jquery', $handle . '-slick' ), '', true);
+					wp_enqueue_script($handle, get_template_directory_uri() . '/app/helpers/gallery-carousel/gallery-carousel' . $min . '.js', array( 'jquery', $handle . '-slick' ), '', true);
 				}
 				wp_localize_script($handle, 'gallery_carousel', static::$items_carousel);
 			}
@@ -171,13 +173,13 @@ if ( ! class_exists('Halftheory_Helper_Gallery_Carousel', false) ) :
 				return;
 			}
 			if ( $carousel ) {
-            	$settings = $this->get_slick_settings();
-            }
+				$settings = $this->get_slick_settings();
+			}
 			?>
 <script type="text/html" id="tmpl-<?php echo esc_attr($this->prefix); ?>">
 	<?php if ( $aspectratio ) : ?>
 	<span class="setting">
-		<label for="gallery-aspectratio" class="name select-label-inline"><?php _e('Aspect ratio'); ?></label>
+		<label for="gallery-aspectratio" class="name select-label-inline"><?php esc_html_e('Aspect ratio'); ?></label>
 		<select id="gallery-aspectratio" name="aspectratio" data-setting="aspectratio">
 			<option value="">--</option>
 		<?php foreach ( $this->aspectratio_options as $key => $value ) : ?>
@@ -188,10 +190,10 @@ if ( ! class_exists('Halftheory_Helper_Gallery_Carousel', false) ) :
 	<?php endif; ?>
 	<?php if ( $carousel ) : ?>
 	<span class="setting"><hr /></span>
-	<h2 style="position: static;"><?php _e('Carousel Settings'); ?></h2>
+	<h2 style="position: static;"><?php esc_html_e('Carousel Settings'); ?></h2>
 	<span class="setting">
 		<input type="checkbox" id="<?php echo esc_attr($this->prefix); ?>-active" data-setting="carousel" />
-		<label for="<?php echo esc_attr($this->prefix); ?>-active" class="checkbox-label-inline"><?php _e('Create Carousel?'); ?></label>
+		<label for="<?php echo esc_attr($this->prefix); ?>-active" class="checkbox-label-inline"><?php esc_html_e('Create Carousel?'); ?></label>
 	</span>
 	<?php foreach ( $settings as $key => $value ) : ?>
 	<span class="setting">
@@ -199,10 +201,10 @@ if ( ! class_exists('Halftheory_Helper_Gallery_Carousel', false) ) :
 		<label for="<?php echo esc_attr($this->prefix); ?>-<?php echo esc_attr(strtolower($key)); ?>" class="checkbox-label-inline" style="min-width: 33%;"><?php echo ucfirst($key); ?></label>
 		<input type="checkbox" id="<?php echo esc_attr($this->prefix); ?>-<?php echo esc_attr(strtolower($key)); ?>" data-setting="carousel_<?php echo esc_attr(strtolower($key)); ?>" />
 		<?php elseif ( is_float($value) || is_int($value) ) : ?>
-		<label for="<?php echo esc_attr($this->prefix); ?>-<?php echo esc_attr(strtolower($key)); ?>" class="checkbox-label-inline"><?php echo ucfirst($key); ?></label>
+		<label for="<?php echo esc_attr($this->prefix); ?>-<?php echo esc_attr(strtolower($key)); ?>" class="checkbox-label-inline"><?php echo esc_html(ucfirst($key)); ?></label>
 		<input type="number" id="<?php echo esc_attr($this->prefix); ?>-<?php echo esc_attr(strtolower($key)); ?>" data-setting="carousel_<?php echo esc_attr(strtolower($key)); ?>" value="" />
 		<?php else : ?>
-		<label for="<?php echo esc_attr($this->prefix); ?>-<?php echo esc_attr(strtolower($key)); ?>" class="checkbox-label-inline"><?php echo ucfirst($key); ?></label>
+		<label for="<?php echo esc_attr($this->prefix); ?>-<?php echo esc_attr(strtolower($key)); ?>" class="checkbox-label-inline"><?php echo esc_html(ucfirst($key)); ?></label>
 		<input type="text" id="<?php echo esc_attr($this->prefix); ?>-<?php echo esc_attr(strtolower($key)); ?>" data-setting="carousel_<?php echo esc_attr(strtolower($key)); ?>" value="" />
 		<?php endif; ?>
 	</span>
@@ -230,7 +232,7 @@ if ( $carousel ) {
 	});
 	wp.media.view.Settings.Gallery = wp.media.view.Settings.Gallery.extend({
 		template: function(view){
-			return wp.media.template('gallery-settings')(view) + wp.media.template('<?php echo $this->prefix; ?>')(view);
+			return wp.media.template('gallery-settings')(view) + wp.media.template('<?php echo esc_html($this->prefix); ?>')(view);
 		},
 		update: function( key ) {
 			var value = this.model.get(key),
@@ -369,15 +371,15 @@ if ( $carousel ) {
 
 		private function shortcode_attr_to_slick_settings( $attr = array() ) {
 			$attr = (array) $attr;
-            $res = array();
+			$res = array();
 			if ( empty($attr) ) {
 				return $res;
 			}
 			// keys could be lowercase.
 			$defaults = $this->get_slick_defaults();
-        	$keys = array_map('strtolower', array_keys($defaults));
-        	$defaults_keymap = array_combine($keys, array_keys($defaults));
-        	// find relevant values.
+			$keys = array_map('strtolower', array_keys($defaults));
+			$defaults_keymap = array_combine($keys, array_keys($defaults));
+			// find relevant values.
 			foreach ( $attr as $key => $value ) {
 				if ( strpos($key, 'carousel_') === 0 ) {
 					$key = str_replace('carousel_', '', $key);

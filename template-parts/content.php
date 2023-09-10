@@ -32,7 +32,7 @@ if ( is_singular() ) {
 }
 // Edit.
 edit_post_link(
-	sprintf(__('Edit') . '<span class="screen-reader-text"> "%s"</span>', get_the_title()),
+	wp_sprintf(__('Edit') . ' <span class="screen-reader-text">"%s"</span>', get_the_title()),
 	"\n" . '<span class="edit-link">',
 	'</span>'
 );

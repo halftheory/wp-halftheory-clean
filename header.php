@@ -37,7 +37,7 @@
 						'menu_class'     => '',
 						'container'      => '',
 						'depth'          => 2,
-				 	)
+					)
 				);
 				?>
 				</nav>

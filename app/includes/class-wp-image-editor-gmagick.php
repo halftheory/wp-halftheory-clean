@@ -11,6 +11,7 @@
  *
  * @see WP_Image_Editor
  */
+#[AllowDynamicProperties]
 class WP_Image_Editor_Gmagick extends WP_Image_Editor {
 	/**
 	 * Gmagick object.

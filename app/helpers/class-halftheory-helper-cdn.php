@@ -3,6 +3,7 @@
 defined('ABSPATH') || exit;
 
 if ( ! class_exists('Halftheory_Helper_CDN', false) ) :
+	#[AllowDynamicProperties]
 	class Halftheory_Helper_CDN {
 
 		private static $replacements = array();
@@ -26,8 +27,8 @@ if ( ! class_exists('Halftheory_Helper_CDN', false) ) :
 		private static $common = array();
 
 		public function __construct() {
-			if ( function_exists('is_front_end') ) {
-				if ( ! is_front_end() ) {
+			if ( function_exists('is_public') ) {
+				if ( ! is_public() ) {
 					return;
 				}
 			} elseif ( is_admin() ) {

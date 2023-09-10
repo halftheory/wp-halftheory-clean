@@ -1,4 +1,8 @@
 @charset "UTF-8";
+@import '../../../assets/css/01-variables';
+@import '../../../assets/css/02-mixins';
+@import '../../../assets/css/03-classes';
+@import '../../../assets/css/04-colors';
 
 $prefix: 'gallery-carousel';
 
@@ -6,5 +10,21 @@ $prefix: 'gallery-carousel';
     // carousel
     &.#{$prefix} {
         display: grid;
+
+        // 'light' mode
+        .slick-prev,
+        .slick-next {
+            &:before {
+                color: $black;
+                opacity: 0.2;
+                @include transition(opacity);
+            }
+            &:hover {
+                &:before {
+                    opacity: 1;
+                }
+            }
+        }
+
     }
 }

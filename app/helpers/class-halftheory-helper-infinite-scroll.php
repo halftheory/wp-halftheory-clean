@@ -10,6 +10,7 @@ halftheory_helper_infinite_scroll_script_data
 defined('ABSPATH') || exit;
 
 if ( ! class_exists('Halftheory_Helper_Infinite_Scroll', false) ) :
+	#[AllowDynamicProperties]
 	class Halftheory_Helper_Infinite_Scroll {
 
 		public $container = 'primary';
@@ -18,8 +19,8 @@ if ( ! class_exists('Halftheory_Helper_Infinite_Scroll', false) ) :
 		private $query = null;
 
 		public function __construct() {
-    		if ( function_exists('is_front_end') ) {
-    			if ( ! is_front_end() ) {
+    		if ( function_exists('is_public') ) {
+    			if ( ! is_public() ) {
     				return;
     			}
     		} elseif ( is_admin() && ! wp_doing_ajax() ) {
@@ -45,38 +46,40 @@ if ( ! class_exists('Halftheory_Helper_Infinite_Scroll', false) ) :
 
 		public function wp_ajax_infinite_scroll() {
 			if ( ! isset($_POST, $_POST['page']) ) {
-				wp_die();
+				wp_die( -1 );
 			}
 			$args = array( 'paged' => $_POST['page'], 'post_status' => 'publish,inherit' );
 
 			// get current query.
 			if ( isset($_POST['query']) ) {
-				$_POST['query'] = make_array($_POST['query']);
+				$_POST['query'] = make_array(wp_unslash($_POST['query']));
 				if ( isset($_POST['query']['paged']) ) {
 					unset($_POST['query']['paged']);
 				}
 				$args = array_merge($args, $_POST['query']);
-			} elseif ( isset($_POST['param']) && isset($_POST['value']) ) {
+			} elseif ( isset($_POST['param'], $_POST['value']) ) {
+				$post_param = wp_unslash($_POST['param']);
+				$post_value = wp_unslash($_POST['value']);
 				// fallback.
 				// turn date_query and tax_query into arrays.
-				if ( $_POST['param'] === 'date_query' ) {
-					$args[ $_POST['param'] ] = array(
-						'after' => strtotime($_POST['value']),
-						'before' => strtotime('+1 day', strtotime($_POST['value'])),
+				if ( $post_param === 'date_query' ) {
+					$args[ $post_param ] = array(
+						'after' => strtotime($post_value),
+						'before' => strtotime('+1 day', strtotime($post_value)),
 					);
-				} elseif ( $_POST['param'] === 'tax_query' ) {
-					$term = get_term( (int) $_POST['value']);
+				} elseif ( $post_param === 'tax_query' ) {
+					$term = get_term( (int) $post_value);
 					if ( ! empty($term) && ! is_wp_error($term) ) {
-						$args[ $_POST['param'] ] = array(
+						$args[ $post_param ] = array(
 							array(
 								'taxonomy' => $term->taxonomy,
 								'field' => 'term_id',
-								'terms' => (int) $_POST['value'],
+								'terms' => (int) $post_value,
 							),
 						);
 					}
 				} else {
-					$args[ $_POST['param'] ] = $_POST['value'];
+					$args[ $post_param ] = $post_value;
 				}
 			}
 
@@ -204,14 +207,15 @@ if ( ! class_exists('Halftheory_Helper_Infinite_Scroll', false) ) :
 				return;
 			}
 			$handle = $this->ajax_action;
+            $min = ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) ? '' : '.min';
 			if ( method_exists('Halftheory_Clean', 'get_theme_version') ) {
 				wp_enqueue_style($handle, get_template_directory_uri() . '/app/helpers/infinite-scroll/infinite-scroll.css', array(), Halftheory_Clean::get_instance()->get_theme_version(get_template_directory() . '/app/helpers/infinite-scroll/infinite-scroll.css'), 'screen');
 				wp_enqueue_script('jqueryrotate', get_template_directory_uri() . '/app/helpers/infinite-scroll/jQueryRotateCompressed.js', array( 'jquery' ), '2.3', true);
-                wp_enqueue_script($handle, get_template_directory_uri() . '/app/helpers/infinite-scroll/infinite-scroll' . ( ! ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) ? '.min' : '' ) . '.js', array( 'jquery', 'jqueryrotate' ), Halftheory_Clean::get_instance()->get_theme_version(get_template_directory() . '/app/helpers/infinite-scroll/infinite-scroll' . ( ! ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) ? '.min' : '' ) . '.js'), true);
+                wp_enqueue_script($handle, get_template_directory_uri() . '/app/helpers/infinite-scroll/infinite-scroll' . $min . '.js', array( 'jquery', 'jqueryrotate' ), Halftheory_Clean::get_instance()->get_theme_version(get_template_directory() . '/app/helpers/infinite-scroll/infinite-scroll' . $min . '.js'), true);
 			} else {
 				wp_enqueue_style($handle, get_template_directory_uri() . '/app/helpers/infinite-scroll/infinite-scroll.css', array(), '', 'screen');
 				wp_enqueue_script('jqueryrotate', get_template_directory_uri() . '/app/helpers/infinite-scroll/jQueryRotateCompressed.js', array( 'jquery' ), '2.3', true);
-				wp_enqueue_script($handle, get_template_directory_uri() . '/app/helpers/infinite-scroll/infinite-scroll' . ( ! ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) ? '.min' : '' ) . '.js', array( 'jquery', 'jqueryrotate' ), '', true);
+				wp_enqueue_script($handle, get_template_directory_uri() . '/app/helpers/infinite-scroll/infinite-scroll' . $min . '.js', array( 'jquery', 'jqueryrotate' ), '', true);
 			}
 			// build the data array.
 			$data = array(

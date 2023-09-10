@@ -8,7 +8,7 @@ $url = false;
 $load_template = false;
 
 if ( isset($_GET['url']) ) {
-	$url = sanitize_text_field(wp_unslash($_GET['url']));
+	$url = sanitize_url(wp_unslash($_GET['url']));
 } else {
 	// Exit if accessed directly.
 	defined('ABSPATH') || exit;

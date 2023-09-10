@@ -5,6 +5,7 @@ defined('ABSPATH') || exit;
 $theme_plugin = 'Halftheory_Clean_Plugin_Git_Updater';
 
 if ( ! class_exists('Halftheory_Clean_Plugin_Git_Updater', false) ) :
+	#[AllowDynamicProperties]
 	final class Halftheory_Clean_Plugin_Git_Updater {
 
 		private $plugin_prefix = 'wp-halftheory';
