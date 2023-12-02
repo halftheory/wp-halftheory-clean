@@ -175,22 +175,6 @@ $iframe-audio: iframes("soundcloud.com/","spotify.com/","mixcloud.com/");
 	}
 }
 
-@mixin aspect-ratio-old($width: 16, $height: 9, $max-width: 100vw, $print-height: true, $print-aspect-ratio: true) {
-	$width: round($width);
-	$height: round($height);
-	@if $print-height {
-		$ratio: $height/$width;
-		height: calc(#{$max-width} * #{$ratio});
-	}
-	@if $print-aspect-ratio {
-		@supports (aspect-ratio: #{$width}/#{$height}) {
-			aspect-ratio: #{$width}/#{$height};
-			height: auto !important;
-			max-height: none;
-		}
-	}
-}
-
 @mixin aspect-ratio-img($width: 16, $height: 9) {
 	$width: round($width);
 	$height: round($height);

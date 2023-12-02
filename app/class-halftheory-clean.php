@@ -1162,6 +1162,7 @@ if ( ! class_exists('Halftheory_Clean', false) ) :
 
 		public function wp_get_attachment_url( $url, $post_ID ) {
 			// fixes bug in 'wp_get_attachment_url' which skips ssl urls when using ajax.
+			global $pagenow;
 			if ( is_ssl() && is_public() && 'wp-login.php' !== $pagenow ) {
 				$url = set_url_scheme($url);
 			}
