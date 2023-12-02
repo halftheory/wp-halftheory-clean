@@ -206,11 +206,9 @@ if ( ! class_exists('Halftheory_Helper_Plugin', false) ) :
 			if ( $plugin->load_menu_page_tab() ) {
 				return;
 			}
-
-			global $title;
 			?>
 			<div class="wrap">
-			<h2><?php echo esc_html($title); ?></h2>
+			<h2><?php echo esc_html(get_admin_page_title()); ?></h2>
 
 			<?php
 			if ( $plugin->save_menu_page(__FUNCTION__) ) {
@@ -240,10 +238,9 @@ if ( ! class_exists('Halftheory_Helper_Plugin', false) ) :
 		}
 
 		public function menu_page_tab( $plugin ) {
-			global $title;
 			?>
 			<div class="wrap">
-			<h2><?php echo esc_html($title); ?></h2>
+			<h2><?php echo esc_html(get_admin_page_title()); ?></h2>
 
 			<?php
 			if ( $plugin->save_menu_page(__FUNCTION__) ) {
