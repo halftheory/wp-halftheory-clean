@@ -1,17 +1,19 @@
 <?php
 // Exit if accessed directly.
-defined('ABSPATH') || exit;
+defined('ABSPATH') || exit(__FILE__);
 
-/* functions */
-if ( ! is_child_theme() && is_readable(__DIR__ . '/app/functions-common.php') ) {
-	include_once __DIR__ . '/app/functions-common.php';
-} elseif ( is_readable(get_template_directory() . '/app/functions-common.php') ) {
-	include_once get_template_directory() . '/app/functions-common.php';
+if ( is_readable(__DIR__ . '/vendor/autoload.php') ) {
+	require __DIR__ . '/vendor/autoload.php';
+} else {
+	exit('composer u');
 }
-/* theme */
-if ( ! class_exists('Halftheory_Clean', false) && is_readable(__DIR__ . '/app/class-halftheory-clean.php') ) {
-	include_once __DIR__ . '/app/class-halftheory-clean.php';
+
+if ( ! function_exists('halftheoryclean') ) {
+	function halftheoryclean( $autoload = false ) {
+		return class_exists('Halftheory\Themes\Halftheory_Clean\Halftheory_Clean_Theme') ? Halftheory\Themes\Halftheory_Clean\Halftheory_Clean_Theme::get_instance($autoload) : null;
+	}
 }
-if ( ! is_child_theme() && class_exists('Halftheory_Clean', false) && ! isset($GLOBALS['Halftheory_Clean']) ) {
-    $GLOBALS['Halftheory_Clean'] = Halftheory_Clean::get_instance(true);
+
+if ( ! is_child_theme() && ! isset($GLOBALS['Halftheory_Clean_Theme']) ) {
+	$GLOBALS['Halftheory_Clean_Theme'] = halftheoryclean(true);
 }

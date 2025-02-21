@@ -1,20 +1,28 @@
 		</main>
 
-		<footer id="footer" class="clear">
-		<?php if ( is_active_sidebar('sidebar-2') ) : ?>
-			<aside id="sidebar-2" class="sidebar widget-area">
-				<?php dynamic_sidebar('sidebar-2'); ?>
-			</aside><!-- #sidebar-2 -->
-		<?php endif; ?>
-
-		<?php if ( is_active_sidebar('sidebar-3') ) : ?>
-			<aside id="sidebar-3" class="sidebar widget-area">
-				<?php dynamic_sidebar('sidebar-3'); ?>
-			</aside><!-- #sidebar-3 -->
-		<?php endif; ?>
+		<footer id="footer" role="contentinfo">
+			<?php
+			if ( has_nav_menu('footer') ) {
+				?>
+				<nav id="nav-footer" role="menu" aria-label="<?php esc_attr_e('Footer Menu'); ?>">
+				<?php
+				wp_nav_menu(
+					array(
+						'theme_location' => 'footer',
+						'menu_id'        => 'menu-footer',
+						'menu_class'     => '',
+						'container'      => '',
+						'depth'          => 1,
+					)
+				);
+				?>
+				</nav>
+				<?php
+			}
+			?>
 		</footer>
 
-	</div><!-- #page -->
+	</div>
 <?php wp_footer(); ?>
 </body>
 </html>
