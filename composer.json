@@ -1,6 +1,6 @@
 {
     "name": "halftheory/wp-halftheory-clean",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "type": "wordpress-theme",
     "description": "Custom WordPress Theme.",
     "homepage": "https://github.com/halftheory/wp-halftheory-clean/",
@@ -21,18 +21,17 @@
             "type": "package",
             "package": {
                 "name": "halftheory/wp-lib",
-                "type": "library",
-                "version": "1.0.0",
+                "version": "1.0.1",
                 "source": {
                     "url": "https://github.com/halftheory/wp-lib/",
                     "type": "git",
-                    "reference": "main"
+                    "reference": "1.0.1"
                 }
             }
         }
     ],
     "require": {
         "php": ">=7.4",
-        "halftheory/wp-lib": "^1"
+        "halftheory/wp-lib": "^1.0"
     }
 }
