@@ -413,6 +413,20 @@ class Halftheory_Clean_Filters extends Filters {
 			$description = get_bloginfo('description');
 		}
 		if ( ! empty($description) ) {
+			$args = array(
+				'append' => array(
+					'short' => '',
+					'long' => '',
+					'always' => '',
+				),
+				'html' => false,
+				'remove' => array(
+					'breaks' => true,
+					'email' => true,
+					'url' => true,
+				),
+			);
+			$description = get_excerpt($description, 500, $args);
 			$description = wp_trim_words($description, 25);
 			echo '<meta name="description" content="' . esc_attr($description) . '" />' . "\n";
 			$og['description'] = $itemprop['description'] = $description;
