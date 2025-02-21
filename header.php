@@ -9,30 +9,33 @@
 <?php if ( is_singular() && pings_open(get_queried_object()) ) : ?>
 <link rel="pingback" href="<?php bloginfo('pingback_url'); ?>">
 <?php endif; ?>
-<title><?php wp_title('-', true, ''); ?></title>
+<title><?php bloginfo('name'); ?><?php wp_title('-', true, ''); ?></title>
 <?php wp_head(); ?>
 </head>
-
 <body <?php body_class(); ?>>
 	<div id="page">
 
-		<header id="header" class="clear">
-
-			<div id="logo">
-				<div class="float-left">
-					<h1 class="site-title"><a href="<?php echo esc_url( home_url('/') ); ?>" rel="home"><?php bloginfo('name'); ?></a></h1>
-				</div>
-				<div class="float-right">
-					<p class="site-description"><?php bloginfo('description'); ?></p>
-				</div>
+		<header id="header" role="banner">
+			<div id="header-title" role="contentinfo">
+				<a href="<?php echo esc_url(home_url('/')); ?>" rel="home">
+					<?php
+					if ( has_custom_logo() ) {
+						if ( $tmp = get_image_context('img', get_theme_mod('custom_logo'), 'medium', array( 'class' => 'logo' )) ) {
+							echo wp_kses_post($tmp);
+						}
+					}
+					?>
+					<h1><?php bloginfo('name'); ?></h1>
+				</a>
 			</div>
-
-			<?php if ( has_nav_menu('primary-menu') ) : ?>
-				<nav id="navigation" role="navigation" aria-label="<?php esc_attr_e('Primary Menu'); ?>">
+			<?php
+			if ( has_nav_menu('primary') ) {
+				?>
+				<nav id="nav-primary" role="menu" aria-label="<?php esc_attr_e('Primary Menu'); ?>">
 				<?php
 				wp_nav_menu(
 					array(
-						'theme_location' => 'primary-menu',
+						'theme_location' => 'primary',
 						'menu_id'        => 'menu',
 						'menu_class'     => '',
 						'container'      => '',
@@ -41,8 +44,9 @@
 				);
 				?>
 				</nav>
-			<?php endif; ?>
-
+				<?php
+			}
+			?>
 		</header>
 
-		<main id="main" class="clear">
+		<main id="main" role="main">

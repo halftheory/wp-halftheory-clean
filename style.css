@@ -1,64 +1,12 @@
-/*
+/*!
 Theme Name: Half/theory Clean
-Theme URI: https://github.com/halftheory/wp-halftheory-clean
-GitHub Theme URI: https://github.com/halftheory/wp-halftheory-clean
+Theme URI: https://github.com/halftheory/wp-halftheory-clean/
+GitHub Theme URI: https://github.com/halftheory/wp-halftheory-clean/
 Author: Half/theory
-Author URI: https://github.com/halftheory
-Description: Common PHP functions, clean CSS, mobile menu, meta tags removed, Wordpress cleanup.
-Version: 1.0
+Author URI: https://github.com/halftheory/
+Description: Custom WordPress Theme.
+Version: 1.0.2
 License: GNU General Public License v2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 Text Domain: wp-halftheory-clean
 */
-@import url(assets/css/normalize.css);
-html { font-size: 16px; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; -moz-text-size-adjust: 100%; -o-text-size-adjust: 100%; text-size-adjust: 100%; font-family: sans-serif; box-sizing: border-box; }
-
-*, *:before, *:after { box-sizing: inherit; }
-
-body { font-size: 16px; font-size: 1rem; margin: 0; font-weight: normal; font-style: normal; text-decoration: none; }
-
-body * { margin: 0; padding: 0; border: 0; background-color: transparent; font-size: inherit; font-weight: inherit; font-style: inherit; text-decoration: inherit; line-height: inherit; }
-
-b, strong, .bold { font-weight: 700; }
-
-i, em, .italic { font-style: italic; }
-
-u, .underline { text-decoration: underline; }
-
-del, .strikethrough { text-decoration: line-through; }
-
-small, .small { font-size: 14px; font-size: 0.85rem; }
-
-.none { display: none; }
-
-.hidden { visibility: hidden; }
-
-.transparent { opacity: 0; filter: alpha(opacity=0); }
-
-.clear { clear: both; }
-
-.nobr { white-space: nowrap; }
-
-.single-line { text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 100%; }
-
-.float-left { float: left; }
-
-.float-right { float: right; }
-
-.indent-left { margin-left: 32px; margin-left: 2rem; }
-
-.indent-right { margin-right: 32px; margin-right: 2rem; }
-
-.center { text-align: center; }
-
-a:focus { outline: 0; }
-
-.clearfix:before, .clearfix:after { content: ""; display: table; table-layout: fixed; }
-
-.clearfix:after { clear: both; }
-
-button.single-line, .single-line.button { display: inline-block; }
-
-.bottom { vertical-align: bottom; }
-
-.screen-reader-text { border: 0; clip: rect(1px, 1px, 1px, 1px); -webkit-clip-path: inset(50%); clip-path: inset(50%); height: 1px; margin: -1px; overflow: hidden; padding: 0; position: absolute !important; width: 1px; word-wrap: normal !important; word-break: normal; }
