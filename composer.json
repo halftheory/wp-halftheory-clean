@@ -1,0 +1,38 @@
+{
+    "name": "halftheory/wp-halftheory-clean",
+    "version": "1.0.2",
+    "type": "wordpress-theme",
+    "description": "Custom WordPress Theme.",
+    "homepage": "https://github.com/halftheory/wp-halftheory-clean/",
+    "authors": [
+        {
+            "name": "Half/theory",
+            "email": "noreply@halftheory.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Halftheory\\Lib\\": "vendor/halftheory/wp-lib/src/",
+            "Halftheory\\Themes\\Halftheory_Clean\\": "src/"
+        }
+    },
+    "repositories": [
+        {
+            "type": "package",
+            "package": {
+                "name": "halftheory/wp-lib",
+                "type": "library",
+                "version": "1.0.0",
+                "source": {
+                    "url": "https://github.com/halftheory/wp-lib/",
+                    "type": "git",
+                    "reference": "main"
+                }
+            }
+        }
+    ],
+    "require": {
+        "php": ">=7.4",
+        "halftheory/wp-lib": "^1"
+    }
+}

@@ -1,0 +1,13 @@
+@use 'sass' as *;
+@use 'variables' as v;
+@use 'functions' as f;
+
+@mixin breakpoint($value) {
+	$result: $value;
+	@if map-get(v.$breakpoints, $value) {
+		$result: map-get(v.$breakpoints, $value);
+	}
+	@media (min-width: $result) {
+		@content;
+	}
+}
