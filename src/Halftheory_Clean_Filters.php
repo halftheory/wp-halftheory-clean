@@ -13,6 +13,7 @@ class Halftheory_Clean_Filters extends Filters {
 	protected static $filters = array();
 
 	public function __construct( $autoload = false ) {
+		$this->load_functions('wp');
 		parent::__construct($autoload);
 	}
 
@@ -41,7 +42,7 @@ class Halftheory_Clean_Filters extends Filters {
 			add_filter('private_title_format', array( $this, 'public_private_title_format' ));
 			add_filter('protected_title_format', array( $this, 'public_private_title_format' ));
 			add_filter('post_class', array( $this, 'public_post_class' ), 20, 3);
-			add_filter('the_content', array( $this, 'public_the_content' ), 10);
+			add_filter('the_content', array( $this, 'public_the_content' ), 9);
 			add_filter('get_the_excerpt', array( $this, 'public_get_the_excerpt' ), 9, 2);
 			add_filter('safe_style_css', array( $this, 'public_safe_style_css' ), 20);
 			add_filter('embed_oembed_html', array( $this, 'public_embed_oembed_html' ), 10, 4);
@@ -76,7 +77,7 @@ class Halftheory_Clean_Filters extends Filters {
 		add_filter('xmlrpc_enabled', '__return_false');
 
 		// Only when active.
-		if ( function_exists('halftheoryclean') && halftheoryclean()::$handle === get_stylesheet() ) {
+		if ( isset($GLOBALS['Halftheory_Clean_Theme']) && $GLOBALS['Halftheory_Clean_Theme']->is_theme_active() ) {
 			// Menus.
 			register_nav_menus(
 				array(
@@ -197,6 +198,13 @@ class Halftheory_Clean_Filters extends Filters {
 		}
 		// Main query.
 		if ( $query->is_main_query() ) {
+			// Add taxonomy.
+			if ( empty($query->get('taxonomy')) ) {
+				$queried_object = get_queried_object();
+				if ( is_a($queried_object, 'WP_Term') ) {
+					$query->set('taxonomy', $queried_object->taxonomy);
+				}
+			}
 			// Add post_type.
 			if ( empty($query->get('post_type')) ) {
 				$array = array();
@@ -210,13 +218,12 @@ class Halftheory_Clean_Filters extends Filters {
 				$query->set('post_type', array_values($array));
 			}
 		}
-		// Add post_status.
+		// Add post_status for attachments.
 		if ( in_array('attachment', make_array($query->get('post_type'))) ) {
-			$tmp1 = make_array($query->get('post_status'));
-			if ( ! in_array('any', $tmp1) ) {
-				$tmp2 = array( 'publish', 'inherit' );
-				$query->set('post_status', array_values(array_unique(array_merge($tmp1, $tmp2))));
-			}
+			$tmp = make_array($query->get('post_status'));
+			$tmp = array_value_unset($tmp, 'any');
+			$tmp = array_values(array_unique(array_merge($tmp, array( 'publish', 'inherit' ))));
+			$query->set('post_status', $tmp);
 		}
 	}
 
@@ -295,12 +302,12 @@ class Halftheory_Clean_Filters extends Filters {
 		wp_deregister_script('wp-embed');
 
 		// Only when active.
-		if ( function_exists('halftheoryclean') && halftheoryclean()::$handle === get_stylesheet() ) {
+		if ( isset($GLOBALS['Halftheory_Clean_Theme']) && $GLOBALS['Halftheory_Clean_Theme']->is_theme_active() ) {
 			// CSS.
 			wp_enqueue_style('dashicons');
-			wp_enqueue_style(halftheoryclean()::$handle, get_stylesheet_directory_uri() . '/assets/css/style.css', array( 'dashicons' ), get_file_version(get_stylesheet_directory() . '/assets/css/style.css'));
+			wp_enqueue_style($GLOBALS['Halftheory_Clean_Theme']::$handle, get_stylesheet_directory_uri() . '/assets/css/style.css', array( 'dashicons' ), get_file_version(get_stylesheet_directory() . '/assets/css/style.css'));
 			// JS.
-			wp_enqueue_script(halftheoryclean()::$handle, get_stylesheet_directory_uri() . '/assets/js/main.min.js', array( 'jquery' ), get_file_version(get_stylesheet_directory() . '/assets/js/main.min.js'), true);
+			wp_enqueue_script($GLOBALS['Halftheory_Clean_Theme']::$handle, get_stylesheet_directory_uri() . '/assets/js/main.min.js', array( 'jquery' ), get_file_version(get_stylesheet_directory() . '/assets/js/main.min.js'), true);
 		}
 	}
 
@@ -559,23 +566,18 @@ class Halftheory_Clean_Filters extends Filters {
 		if ( isset($wp_query->is_page) && $wp_query->is_page ) {
 			return $sorted_menu_items;
 		}
-		$front = get_post_front_page();
-		if ( empty($front) ) {
+		$front_page = get_post_front_page();
+		if ( ! $front_page ) {
 			return $sorted_menu_items;
+		}
+		$is_cpt = false;
+		if ( $post_type = ht_get_post_type(ht_get_the_ID()) ) {
+			$is_cpt = ! in_array($post_type, get_post_types(array( 'public' => true, '_builtin' => true ), 'names'), true);
 		}
 		foreach ( $sorted_menu_items as $key => &$menu_item ) {
 			if ( property_exists($menu_item, 'classes') && is_array($menu_item->classes) && in_array('current_page_parent', $menu_item->classes, true) ) {
-				if ( property_exists($menu_item, 'object_id') && (int) $front->ID === (int) $menu_item->object_id ) {
-					$go = false;
-					if ( is_tax() || is_tag() || is_category() ) {
-						$go = true;
-					} else {
-						$post_type = get_post_type(get_page_id());
-						if ( $post_type && ! in_array($post_type, get_post_types(array( 'public' => true, '_builtin' => true ), 'names'), true) ) {
-							$go = true;
-						}
-					}
-					if ( $go ) {
+				if ( property_exists($menu_item, 'object_id') && (int) $front_page->ID === (int) $menu_item->object_id ) {
+					if ( is_tax() || is_tag() || is_category() || $is_cpt ) {
 						$menu_item->classes = array_values(array_value_unset($menu_item->classes, 'current_page_parent'));
 					}
 				}
@@ -643,6 +645,7 @@ class Halftheory_Clean_Filters extends Filters {
 		if ( ! $this->is_filter_active(__FUNCTION__) ) {
 			return $content;
 		}
+		remove_filter('the_content', 'prepend_attachment');
 		remove_filter('the_content', 'convert_smilies', 20);
 		return $content;
 	}
