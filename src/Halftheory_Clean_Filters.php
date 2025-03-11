@@ -338,8 +338,19 @@ class Halftheory_Clean_Filters extends Filters {
 		}
 		$array = array();
 		array_pop($current_ancestors);
+		$check = array(
+			'prepend' => array(),
+			'append' => array(),
+		);
 		foreach ( $current_ancestors as $value ) {
-			$array[] = implode(' : ', array_filter(array( $value['prepend'], $value['title'], $value['append'] )));
+			$tmp = array(
+				in_array($value['prepend'], $check['prepend']) ? null : $value['prepend'],
+				$value['title'],
+				in_array($value['append'], $check['append']) ? null : $value['append'],
+			);
+			$check['prepend'][] = $value['prepend'];
+			$check['append'][] = $value['append'];
+			$array[] = implode(__(' : '), array_filter($tmp));
 		}
 		if ( ! empty($array) ) {
 			$sep = ' ' . trim($sep) . ' ';
