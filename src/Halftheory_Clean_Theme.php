@@ -26,6 +26,7 @@ class Halftheory_Clean_Theme extends Theme {
 			'no-authors',
 			'no-blocks',
 			'no-comments',
+			'search-common',
 		);
 		$this->load_helpers($array);
 		$this->load_plugins();

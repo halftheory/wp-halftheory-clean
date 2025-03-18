@@ -40,6 +40,7 @@
 						'menu_class'     => '',
 						'container'      => '',
 						'depth'          => 2,
+						'item_spacing' => is_development() ? 'preserve' : 'discard',
 					)
 				);
 				?>
