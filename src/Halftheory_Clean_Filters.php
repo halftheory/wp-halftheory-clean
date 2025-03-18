@@ -24,10 +24,8 @@ class Halftheory_Clean_Filters extends Filters {
 		add_filter('posts_orderby', array( $this, 'global_posts_orderby' ), 20, 2);
 		if ( is_public() ) {
 			// Public.
-			add_filter('request', array( $this, 'public_request' ), 20);
 			add_action('pre_get_posts', array( $this, 'public_pre_get_posts' ), 20);
 			add_action('wp', array( $this, 'public_wp' ), 9);
-			add_action('template_redirect', array( $this, 'public_template_redirect' ), 20);
 			add_filter('wp_default_scripts', array( $this, 'public_wp_default_scripts' ));
 			add_action('wp_enqueue_scripts', array( $this, 'public_wp_enqueue_scripts' ), 20);
 			add_filter('script_loader_src', array( $this, 'public_script_loader_src' ), 90, 2);
@@ -117,52 +115,6 @@ class Halftheory_Clean_Filters extends Filters {
 
 	// Public.
 
-	public function public_request( $query_vars = array() ) {
-		if ( ! $this->is_filter_active(__FUNCTION__) ) {
-			return $query_vars;
-		}
-		// Skip targeted queries.
-		$array = array(
-			'p',
-			'subpost_id',
-			'attachment_id',
-			'pagename',
-			'page_id',
-			'tag_id',
-			'category__in',
-			'post__in',
-			'post_name__in',
-			'tag__in',
-			'tag_slug__in',
-			'author__in',
-			'year',
-			'monthnum',
-			'w',
-			'day',
-			'hour',
-			'minute',
-			'second',
-			'm',
-			'date_query',
-		);
-		foreach ( $array as $value ) {
-			if ( array_key_exists($value, $query_vars) ) {
-				return $query_vars;
-			}
-		}
-		// Search.
-		if ( isset($query_vars['s']) ) {
-			// Clean the search string.
-			$query_vars['s'] = trim(str_replace('%20', ' ', $query_vars['s']));
-			// Add most public post types.
-			if ( ! array_key_exists('post_type', $query_vars) ) {
-				$tmp = array_diff(get_post_types(array( 'public' => true ), 'names'), array( 'attachment', 'revision' ));
-				$query_vars['post_type'] = array_values($tmp);
-			}
-		}
-		return $query_vars;
-	}
-
 	public function public_pre_get_posts( $query ) {
 		if ( ! $this->is_filter_active(__FUNCTION__) ) {
 			 return;
@@ -247,41 +199,6 @@ class Halftheory_Clean_Filters extends Filters {
 		remove_action('wp_head', 'rest_output_link_wp_head', 10, 0);
 		remove_action('wp_print_styles', 'print_emoji_styles');
 		remove_action('admin_print_scripts-index.php', 'wp_localize_community_events');
-	}
-
-	public function public_template_redirect() {
-		if ( ! $this->is_filter_active(__FUNCTION__) ) {
-			return;
-		}
-		// Fix search URLs.
-		if ( is_search() && isset($_GET['s']) ) {
-			if ( ! empty($_GET['s']) ) {
-				$search_slug = rawurlencode(sanitize_text_field(get_search_query()));
-				$replace_pairs = array(
-					'%2F' => '/',
-					'%2C' => ',',
-					'%c2%a0' => ' ',
-					'%C2%A0' => ' ',
-					'%e2%80%93' => '-',
-					'%E2%80%93' => '-',
-					'%e2%80%94' => '-',
-					'%E2%80%94' => '-',
-					'&nbsp;' => ' ',
-					'&#160;' => ' ',
-					'&ndash;' => '-',
-					'&#8211;' => '-',
-					'&mdash;' => '-',
-					'&#8212;' => '-',
-				);
-				$search_slug = strtr($search_slug, $replace_pairs);
-				$url = home_url('/' . sanitize_title(__('Search')) . '/') . $search_slug;
-			} else {
-				$url = home_url();
-			}
-			if ( ht_wp_redirect($url) ) {
-				exit;
-			}
-		}
 	}
 
 	public function public_wp_default_scripts( &$wp_scripts ) {
