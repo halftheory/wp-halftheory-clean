@@ -35,6 +35,7 @@ class Halftheory_Clean_Filters extends Filters {
 			add_filter('get_site_icon_url', array( $this, 'public_get_site_icon_url' ), 10, 3);
 			add_filter('body_class', array( $this, 'public_body_class' ), 20, 2);
 			add_filter('wp_nav_menu_objects', array( $this, 'public_wp_nav_menu_objects' ), 20, 2);
+			add_filter('nav_menu_item_attributes', array( $this, 'public_nav_menu_item_attributes' ), 20, 4);
 			add_filter('get_the_archive_title_prefix', array( $this, 'public_get_the_archive_title_prefix' ));
 			add_filter('get_the_archive_title', array( $this, 'public_get_the_archive_title' ), 20, 3);
 			add_filter('private_title_format', array( $this, 'public_private_title_format' ));
@@ -512,6 +513,16 @@ class Halftheory_Clean_Filters extends Filters {
 			}
 		}
 		return $sorted_menu_items;
+	}
+
+	public function public_nav_menu_item_attributes( $li_atts, $menu_item, $args, $depth ) {
+		if ( ! $this->is_filter_active(__FUNCTION__) ) {
+			return $li_atts;
+		}
+		if ( ! isset($li_atts['role']) ) {
+			$li_atts['role'] = 'menuitem';
+		}
+		return $li_atts;
 	}
 
 	public function public_get_the_archive_title_prefix( $prefix ) {
