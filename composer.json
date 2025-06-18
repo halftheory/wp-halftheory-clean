@@ -1,6 +1,6 @@
 {
     "name": "halftheory/wp-halftheory-clean",
-    "version": "1.0.6",
+    "version": "1.0.7",
     "type": "wordpress-theme",
     "description": "Custom WordPress Theme.",
     "homepage": "https://github.com/halftheory/wp-halftheory-clean/",
@@ -21,11 +21,11 @@
             "type": "package",
             "package": {
                 "name": "halftheory/wp-lib",
-                "version": "1.0.4",
+                "version": "1.0.5",
                 "source": {
                     "url": "https://github.com/halftheory/wp-lib/",
                     "type": "git",
-                    "reference": "1.0.4"
+                    "reference": "1.0.5"
                 }
             }
         }
