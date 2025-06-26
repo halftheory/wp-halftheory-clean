@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html <?php language_attributes(); ?> class="no-js">
-<head itemscope itemtype="<?php echo esc_attr(set_url_scheme('http://schema.org/WebPage')); ?>">
+<head <?php the_microdata_props('head'); ?>>
 <meta charset="<?php bloginfo('charset'); ?>">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -30,22 +30,18 @@
 			</div>
 			<?php
 			if ( has_nav_menu('primary') ) {
-				?>
-				<nav id="nav-primary" role="menu" aria-label="<?php esc_attr_e('Primary Menu'); ?>">
-				<?php
 				wp_nav_menu(
 					array(
 						'theme_location' => 'primary',
+						'container'      => 'nav',
+						'container_id'   => 'nav-primary',
+						'container_class' => '',
 						'menu_id'        => 'menu',
 						'menu_class'     => '',
-						'container'      => '',
 						'depth'          => 2,
 						'item_spacing' => is_development() ? 'preserve' : 'discard',
 					)
 				);
-				?>
-				</nav>
-				<?php
 			}
 			?>
 		</header>
