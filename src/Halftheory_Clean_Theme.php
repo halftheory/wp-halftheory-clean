@@ -23,6 +23,7 @@ class Halftheory_Clean_Theme extends Theme {
 			'gallery-common',
 			'mail-common',
 			'media-common',
+			'microdata',
 			'no-authors',
 			'no-blocks',
 			'no-comments',
