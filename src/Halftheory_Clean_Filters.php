@@ -24,7 +24,7 @@ class Halftheory_Clean_Filters extends Filters {
 		add_filter('posts_orderby', array( $this, 'global_posts_orderby' ), 20, 2);
 		if ( is_public() ) {
 			// Public.
-			add_action('pre_get_posts', array( $this, 'public_pre_get_posts' ), 20);
+			add_action('pre_get_posts', array( $this, 'public_pre_get_posts' ), 90);
 			add_action('wp', array( $this, 'public_wp' ), 9);
 			add_filter('wp_default_scripts', array( $this, 'public_wp_default_scripts' ));
 			add_action('wp_enqueue_scripts', array( $this, 'public_wp_enqueue_scripts' ), 20);
@@ -157,24 +157,18 @@ class Halftheory_Clean_Filters extends Filters {
 					$query->set('taxonomy', $queried_object->taxonomy);
 				}
 			}
-			// Add post_type.
-			if ( empty($query->get('post_type')) ) {
-				$array = array();
+			// Add post_type for taxonomy objects.
+			if ( $query->get('taxonomy') && empty($query->get('post_type')) ) {
 				if ( $tmp = get_taxonomy_objects($query->get('taxonomy')) ) {
-					// Include the taxonomy objects.
-					$array = $tmp;
-				} else {
-					// Most public post types.
-					$array = array_value_unset(get_post_types(array( 'public' => true ), 'names'), 'attachment');
+					$query->set('post_type', $tmp);
 				}
-				$query->set('post_type', array_values($array));
 			}
 		}
 		// Add post_status for attachments.
-		if ( in_array('attachment', make_array($query->get('post_type'))) ) {
+		if ( in_array('attachment', make_array($query->get('post_type'))) && ! in_array('inherit', make_array($query->get('post_status'))) ) {
 			$tmp = make_array($query->get('post_status'));
 			$tmp = array_value_unset($tmp, 'any');
-			$tmp = array_values(array_unique(array_merge($tmp, array( 'publish', 'inherit' ))));
+			$tmp = array_unique(array_merge($tmp, array( 'publish', 'inherit' )));
 			$query->set('post_status', $tmp);
 		}
 	}
@@ -316,7 +310,7 @@ class Halftheory_Clean_Filters extends Filters {
 		// Keywords.
 		$keywords = get_keywords($current_ancestors);
 		if ( ! empty($keywords) ) {
-			echo '<meta name="keywords" content="' . esc_attr(implode(', ', $keywords)) . '" />' . "\n";
+			echo '<meta name="keywords" content="' . esc_attr(implode(', ', $keywords)) . '">' . "\n";
 		}
 
 		// Description.
@@ -364,7 +358,7 @@ class Halftheory_Clean_Filters extends Filters {
 			);
 			$description = get_excerpt($description, 500, $args);
 			$description = wp_trim_words($description, 25);
-			echo '<meta name="description" content="' . esc_attr($description) . '" />' . "\n";
+			echo '<meta name="description" content="' . esc_attr($description) . '">' . "\n";
 			$og['description'] = $itemprop['description'] = $description;
 		}
 
@@ -405,7 +399,7 @@ class Halftheory_Clean_Filters extends Filters {
 		}
 		if ( ! empty($thumbnail_id) ) {
 			if ( $url = get_image_context('url', $thumbnail_id, 'medium') ) {
-				echo '<link rel="image_src" href="' . esc_url($url) . '" />' . "\n";
+				echo '<link rel="image_src" href="' . esc_url($url) . '">' . "\n";
 				$og['image'] = $itemprop['image'] = $url;
 				if ( $tmp = get_image_info($thumbnail_id, 'medium') ) {
 					$og['image:width'] = $tmp['width'];
@@ -417,23 +411,23 @@ class Halftheory_Clean_Filters extends Filters {
 		// Schema.org.
 		foreach ( array_filter($itemprop) as $key => $value ) {
 			if ( $key === 'image' ) {
-				echo '<link itemprop="' . esc_attr($key) . '" href="' . esc_url($value) . '" />' . "\n";
+				echo '<link itemprop="' . esc_attr($key) . '" href="' . esc_url($value) . '">' . "\n";
 				continue;
 			}
 			if ( str_starts_with($value, 'http') ) {
-				echo '<meta itemprop="' . esc_attr($key) . '" content="' . esc_url($value) . '" />' . "\n";
+				echo '<meta itemprop="' . esc_attr($key) . '" content="' . esc_url($value) . '">' . "\n";
 				continue;
 			}
-			echo '<meta itemprop="' . esc_attr($key) . '" content="' . esc_attr($value) . '" />' . "\n";
+			echo '<meta itemprop="' . esc_attr($key) . '" content="' . esc_attr($value) . '">' . "\n";
 		}
 
 		// Open Graph.
 		foreach ( array_filter($og) as $key => $value ) {
 			if ( str_starts_with($value, 'http') ) {
-				echo '<meta property="og:' . esc_attr($key) . '" content="' . esc_url($value) . '" />' . "\n";
+				echo '<meta property="og:' . esc_attr($key) . '" content="' . esc_url($value) . '">' . "\n";
 				continue;
 			}
-			echo '<meta property="og:' . esc_attr($key) . '" content="' . esc_attr($value) . '" />' . "\n";
+			echo '<meta property="og:' . esc_attr($key) . '" content="' . esc_attr($value) . '">' . "\n";
 		}
 	}
 

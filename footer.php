@@ -1,5 +1,4 @@
 		</main>
-
 		<footer id="footer" role="contentinfo">
 			<?php
 			if ( has_nav_menu('footer') ) {
@@ -18,7 +17,6 @@
 			}
 			?>
 		</footer>
-
 	</div>
 <?php wp_footer(); ?>
 </body>

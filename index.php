@@ -13,7 +13,7 @@ if ( ! in_the_loop() ) {
 			<div id="articles">
 			<?php
 			if ( $tmp = is_title_ok(get_the_archive_title()) ) {
-				echo wp_kses_post('<h1 class="entry-title" role="heading" itemprop="name">' . $tmp . '</h1>');
+				echo wp_kses_post('<h1 class="entry-title">' . $tmp . '</h1>');
 			}
 			$tmp = trim(get_the_archive_description());
 			if ( ! empty($tmp) ) {

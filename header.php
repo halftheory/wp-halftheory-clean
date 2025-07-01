@@ -14,7 +14,6 @@
 </head>
 <body <?php body_class(); ?>>
 	<div id="page">
-
 		<header id="header" role="banner">
 			<div id="header-title" role="contentinfo">
 				<a href="<?php echo esc_url(home_url('/')); ?>" rel="home">
@@ -45,5 +44,4 @@
 			}
 			?>
 		</header>
-
 		<main id="main" role="main">
